@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en" x-data="timelineApp()" xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="UTF-8">
+    <title>Timeline Builder</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233b82f6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><line x1='12' y1='4' x2='12' y2='20'></line><circle cx='12' cy='8' r='2' fill='%233b82f6'></circle><circle cx='12' cy='14' r='2' fill='%233b82f6'></circle><circle cx='12' cy='20' r='2' fill='%233b82f6'></circle></svg>">
+  <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+  <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.0/dist/cdn.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
+  <script>
+    function timelineApp() {
+      return {
+        items: [{
+          title: 'Some Interesting Event',
+          color: '#3b82f6',
+          date: (() => {
+            const futureDate = new Date();
+            futureDate.setDate(futureDate.getDate() + 7);
+            return futureDate.toISOString().split('T')[0];
+          })(),
+          displayDate: (() => {
+            const futureDate = new Date();
+            futureDate.setDate(futureDate.getDate() + 7);
+            const day = futureDate.getDate();
+            const suffix = (d => {
+              if (d > 3 && d < 21) return 'th';
+              switch (d % 10) {
+                case 1: return 'st';
+                case 2: return 'nd';
+                case 3: return 'rd';
+                default: return 'th';
+              }
+            })(day);
+            const month = futureDate.toLocaleString('default', { month: 'short' });
+            return `${day}${suffix} ${month}`;
+          })(),
+          timestamp: Date.now() + (7 * 24 * 60 * 60 * 1000),
+          id: Date.now()
+        }],
+        newItem: {
+          title: 'Timeline Event',
+          date: new Date().toISOString().split('T')[0], // Current date in YYYY-MM-DD format
+          color: '#3b82f6' // Default color (blue-500)
+        },
+        showYamlPanel: false,
+        yamlContent: '',
+        addItem() {
+          if (!this.newItem.title || !this.newItem.date) return;
+
+          const parsedDate = new Date(this.newItem.date);
+          if (isNaN(parsedDate)) return;
+
+          this.items.push({
+            ...this.newItem,
+            displayDate: this.formatDate(parsedDate),
+            timestamp: parsedDate.getTime(),
+            id: Date.now()
+          });
+
+          this.items.sort((a, b) => a.timestamp - b.timestamp);
+          this.updateYamlContent();
+        },
+        deleteItem(id) {
+          this.items = this.items.filter(i => i.id !== id);
+          this.updateYamlContent();
+        },
+        formatDate(date) {
+          const day = date.getDate();
+          const suffix = (d => {
+            if (d > 3 && d < 21) return 'th';
+            switch (d % 10) {
+              case 1: return 'st';
+              case 2: return 'nd';
+              case 3: return 'rd';
+              default: return 'th';
+            }
+          })(day);
+          const month = date.toLocaleString('default', { month: 'short' });
+          return `${day}${suffix} ${month}`;
+        },
+        updateYamlContent() {
+          // Simplify the data structure for YAML
+          const yamlData = this.items.map(item => ({
+            title: item.title,
+            date: item.date,
+            color: item.color
+          }));
+          this.yamlContent = jsyaml.dump(yamlData, { lineWidth: -1 });
+          console.log('YAML Updated:', this.yamlContent);
+        },
+        applyYamlChanges() {
+          try {
+            console.log('Applying YAML:', this.yamlContent);
+            const parsedYaml = jsyaml.load(this.yamlContent);
+            console.log('Parsed YAML:', parsedYaml);
+            
+            if (!Array.isArray(parsedYaml)) {
+              throw new Error('YAML must contain an array of items');
+            }
+
+            // Validate each item has required fields
+            parsedYaml.forEach(item => {
+              if (!item.title || !item.date) {
+                throw new Error(`Each item must have title and date. Invalid item: ${JSON.stringify(item)}`);
+              }
+            });
+
+            // Create new items array
+            const newItems = parsedYaml.map(item => {
+              const parsedDate = new Date(item.date);
+              if (isNaN(parsedDate)) {
+                throw new Error(`Invalid date format for item: ${item.title}`);
+              }
+
+              return {
+                title: item.title,
+                date: item.date,
+                color: item.color || '#3b82f6',
+                displayDate: this.formatDate(parsedDate),
+                timestamp: parsedDate.getTime(),
+                id: Date.now() + Math.random()
+              };
+            });
+
+            console.log('New Items:', newItems);
+            this.items = newItems;
+            this.items.sort((a, b) => a.timestamp - b.timestamp);
+            this.showYamlPanel = false;
+          } catch (e) {
+            console.error('YAML Error:', e);
+            alert('Error: ' + e.message);
+          }
+        },
+        init() {
+          this.updateYamlContent();
+          this.$watch('showYamlPanel', value => {
+            if (value) this.updateYamlContent();
+          });
+        }
+      }
+    }
+  </script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <style>
+    .yaml-panel {
+      transform: translateX(100%);
+      transition: transform 0.3s ease-in-out;
+    }
+    .yaml-panel.show {
+      transform: translateX(0);
+    }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen p-6">
+  <div class="max-w-[1200px] mx-auto flex gap-8" x-data="timelineApp()">
+    <!-- Left Column - Form -->
+    <div class="w-[300px] shrink-0 bg-gray-200 p-6 rounded-lg h-fit">
+      <h2 class="text-xl font-semibold mb-6">Add Event</h2>
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Event Title</label>
+          <input type="text" x-model="newItem.title" placeholder="Enter event title"
+                 class="w-full p-2 border border-gray-300 rounded"/>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Date</label>
+          <input type="date" x-model="newItem.date"
+                 class="w-full p-2 border border-gray-300 rounded"/>
+        </div>
+        <button @click="addItem" class="w-full bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700">
+          Add to Timeline
+        </button>
+      </div>
+    </div>
+
+    <!-- Right Column - Timeline -->
+    <div class="flex-1 bg-gray-800 p-6 rounded-lg text-white">
+      <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold">Timeline</h1>
+        <button @click="showYamlPanel = !showYamlPanel" 
+                class="bg-gray-700 text-white px-3 py-1 rounded hover:bg-gray-600 flex items-center gap-2">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+          </svg>
+          <span x-text="showYamlPanel ? 'Hide YAML' : 'Edit YAML'"></span>
+        </button>
+      </div>
+      <div class="relative">
+        <!-- Vertical line through circles -->
+        <div class="absolute left-[149px] w-[4px] bg-gray-400" style="top: -10px; bottom: -10px;"></div>
+        
+        <template x-for="item in items" :key="item.id">
+          <div class="group flex gap-4" :style="{ 
+              marginBottom: (() => {
+                const nextItem = items[items.indexOf(item) + 1];
+                if (!nextItem) return '1.5rem'; // default gap for last item
+                const daysDiff = Math.floor((nextItem.timestamp - item.timestamp) / (1000 * 60 * 60 * 24));
+                return Math.min(Math.max(daysDiff * 0.5, 1.5), 8) + 'rem'; // 0.5rem per day, min 1.5rem, max 8rem
+              })()
+            }">
+            <div class="w-[120px] text-right text-base text-gray-200" x-text="item.displayDate"></div>
+            <div class="w-[30px] flex">
+              <input type="color" :value="item.color" @change="item.color = $event.target.value" class="w-8 h-8 rounded-full z-10 block -mt-[2px] cursor-pointer overflow-hidden p-0 [&::-webkit-color-swatch-wrapper]:p-0 [&::-webkit-color-swatch]:border-none [&::-moz-color-swatch]:border-none" :style="{ backgroundColor: item.color }" title="Click to change color"/>
+            </div>
+            <div class="flex-1 text-base text-gray-200 flex">
+              <span x-text="item.title"></span>
+              <button @click="deleteItem(item.id)" class="ml-2 opacity-0 group-hover:opacity-100 transition-opacity -mt-[3px]" title="Delete">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-red-500 hover:text-red-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2M10 11v6M14 11v6" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
+
+    <!-- YAML Editor Panel -->
+    <div class="yaml-panel fixed top-0 right-0 bottom-0 w-[400px] bg-gray-900 p-6 shadow-lg" 
+         :class="{ 'show': showYamlPanel }">
+      <div class="h-full flex flex-col">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-xl font-semibold text-white">Edit Timeline YAML</h2>
+          <button @click="showYamlPanel = false" class="text-gray-400 hover:text-white">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <textarea x-model="yamlContent" 
+                  class="flex-1 w-full p-4 bg-gray-800 text-gray-200 font-mono text-sm rounded border border-gray-700 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                  placeholder="# Edit your timeline in YAML format"></textarea>
+        <div class="mt-4 flex justify-end">
+          <button @click="applyYamlChanges()" 
+                  class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700">
+            Apply Changes
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
