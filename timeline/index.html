@@ -64,7 +64,7 @@
           this.items = this.items.filter(i => i.id !== id);
           this.updateYamlContent();
         },
-        formatDate(date) {
+                  formatDate(date) {
           const day = date.getDate();
           const suffix = (d => {
             if (d > 3 && d < 21) return 'th';
@@ -76,7 +76,8 @@
             }
           })(day);
           const month = date.toLocaleString('default', { month: 'short' });
-          return `${day}${suffix} ${month}`;
+          const dayOfWeek = date.toLocaleString('default', { weekday: 'short' });
+          return `${dayOfWeek} ${day}${suffix} ${month}`;
         },
         updateYamlContent() {
           // Simplify the data structure for YAML
@@ -188,7 +189,7 @@
       </div>
       <div class="relative">
         <!-- Vertical line through circles -->
-        <div class="absolute left-[149px] w-[4px] bg-gray-400" style="top: -10px; bottom: -10px;"></div>
+        <div class="absolute left-[189px] w-[4px] bg-gray-400" style="top: -10px; bottom: -10px;"></div>
         
         <template x-for="item in items" :key="item.id">
           <div class="group flex gap-4" :style="{ 
@@ -196,10 +197,10 @@
                 const nextItem = items[items.indexOf(item) + 1];
                 if (!nextItem) return '1.5rem'; // default gap for last item
                 const daysDiff = Math.floor((nextItem.timestamp - item.timestamp) / (1000 * 60 * 60 * 24));
-                return Math.min(Math.max(daysDiff * 0.5, 1.5), 8) + 'rem'; // 0.5rem per day, min 1.5rem, max 8rem
+                return Math.min(Math.max(daysDiff * 0.1, 1.5), 8) + 'rem'; // 0.5rem per day, min 1.5rem, max 8rem
               })()
             }">
-            <div class="w-[120px] text-right text-base text-gray-200" x-text="item.displayDate"></div>
+            <div class="w-[160px] text-right text-base text-gray-200" x-text="item.displayDate"></div>
             <div class="w-[30px] flex">
               <input type="color" :value="item.color" @change="item.color = $event.target.value" class="w-8 h-8 rounded-full z-10 block -mt-[2px] cursor-pointer overflow-hidden p-0 [&::-webkit-color-swatch-wrapper]:p-0 [&::-webkit-color-swatch]:border-none [&::-moz-color-swatch]:border-none" :style="{ backgroundColor: item.color }" title="Click to change color"/>
             </div>
