@@ -58,11 +58,9 @@
           });
 
           this.items.sort((a, b) => a.timestamp - b.timestamp);
-          this.updateYamlContent();
         },
         deleteItem(id) {
           this.items = this.items.filter(i => i.id !== id);
-          this.updateYamlContent();
         },
                   formatDate(date) {
           const day = date.getDate();
@@ -126,14 +124,57 @@
             console.log('New Items:', newItems);
             this.items = newItems;
             this.items.sort((a, b) => a.timestamp - b.timestamp);
+            this.saveToLocalStorage();
             this.showYamlPanel = false;
           } catch (e) {
             console.error('YAML Error:', e);
             alert('Error: ' + e.message);
           }
         },
+        loadFromLocalStorage() {
+          const savedYaml = localStorage.getItem('timelineYaml');
+          if (savedYaml) {
+            try {
+              const parsedYaml = jsyaml.load(savedYaml);
+              if (Array.isArray(parsedYaml)) {
+                const newItems = parsedYaml.map(item => {
+                  const parsedDate = new Date(item.date);
+                  return {
+                    title: item.title,
+                    date: item.date,
+                    color: item.color || '#3b82f6',
+                    displayDate: this.formatDate(parsedDate),
+                    timestamp: parsedDate.getTime(),
+                    id: Date.now() + Math.random()
+                  };
+                });
+                this.items = newItems;
+                this.items.sort((a, b) => a.timestamp - b.timestamp);
+              }
+            } catch (e) {
+              console.error('Error loading from localStorage:', e);
+            }
+          }
+        },
+        saveToLocalStorage() {
+          const yamlData = this.items.map(item => ({
+            title: item.title,
+            date: item.date,
+            color: item.color
+          }));
+          const yamlString = jsyaml.dump(yamlData, { lineWidth: -1 });
+          localStorage.setItem('timelineYaml', yamlString);
+        },
         init() {
+          this.loadFromLocalStorage();
           this.updateYamlContent();
+          
+          // Watch for changes and save to localStorage
+          this.$watch('items', () => {
+            this.updateYamlContent();
+            this.saveToLocalStorage();
+          }, { deep: true });
+          
           this.$watch('showYamlPanel', value => {
             if (value) this.updateYamlContent();
           });
