@@ -52,7 +52,8 @@
 
           this.items.push({
             ...this.newItem,
-            displayDate: this.formatDate(parsedDate),
+            dateType: 'normal',
+            displayDate: this.formatDate(parsedDate, 'normal'),
             timestamp: parsedDate.getTime(),
             id: Date.now()
           });
@@ -62,7 +63,13 @@
         deleteItem(id) {
           this.items = this.items.filter(i => i.id !== id);
         },
-                  formatDate(date) {
+        formatDate(date, dateType = 'normal') {
+          if (dateType === 'hidden') {
+            return '';
+          }
+          if (dateType === 'month-only') {
+            return date.toLocaleString('default', { month: 'short' });
+          }
           const day = date.getDate();
           const suffix = (d => {
             if (d > 3 && d < 21) return 'th';
@@ -82,7 +89,8 @@
           const yamlData = this.items.map(item => ({
             title: item.title,
             date: item.date,
-            color: item.color
+            color: item.color,
+            dateType: item.dateType || 'normal'
           }));
           this.yamlContent = jsyaml.dump(yamlData, { lineWidth: -1 });
           console.log('YAML Updated:', this.yamlContent);
@@ -102,6 +110,10 @@
               if (!item.title || !item.date) {
                 throw new Error(`Each item must have title and date. Invalid item: ${JSON.stringify(item)}`);
               }
+              // Validate dateType if provided
+              if (item.dateType && !['normal', 'month-only', 'hidden'].includes(item.dateType)) {
+                throw new Error(`Invalid dateType for item: ${item.title}. Must be 'normal', 'month-only', or 'hidden'`);
+              }
             });
 
             // Create new items array
@@ -115,7 +127,8 @@
                 title: item.title,
                 date: item.date,
                 color: item.color || '#3b82f6',
-                displayDate: this.formatDate(parsedDate),
+                dateType: item.dateType || 'normal',
+                displayDate: this.formatDate(parsedDate, item.dateType || 'normal'),
                 timestamp: parsedDate.getTime(),
                 id: Date.now() + Math.random()
               };
@@ -143,7 +156,8 @@
                     title: item.title,
                     date: item.date,
                     color: item.color || '#3b82f6',
-                    displayDate: this.formatDate(parsedDate),
+                    dateType: item.dateType || 'normal',
+                    displayDate: this.formatDate(parsedDate, item.dateType || 'normal'),
                     timestamp: parsedDate.getTime(),
                     id: Date.now() + Math.random()
                   };
@@ -160,7 +174,8 @@
           const yamlData = this.items.map(item => ({
             title: item.title,
             date: item.date,
-            color: item.color
+            color: item.color,
+            dateType: item.dateType || 'normal'
           }));
           const yamlString = jsyaml.dump(yamlData, { lineWidth: -1 });
           localStorage.setItem('timelineYaml', yamlString);
