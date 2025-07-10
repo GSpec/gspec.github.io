@@ -92,7 +92,8 @@
             date: item.date,
             color: item.color,
             dateType: item.dateType || 'normal',
-            ...(item.subText ? { subText: item.subText } : {})
+            ...(item.subText ? { subText: item.subText } : {}),
+            ...(item.bullets?.length ? { bullets: item.bullets } : {})
           }));
           this.yamlContent = jsyaml.dump(yamlData, { lineWidth: -1 });
           console.log('YAML Updated:', this.yamlContent);
@@ -131,6 +132,7 @@
                 color: item.color || '#3b82f6',
                 dateType: item.dateType || 'normal',
                 subText: item.subText || '',
+                bullets: item.bullets || [],
                 displayDate: this.formatDate(parsedDate, item.dateType || 'normal'),
                 timestamp: parsedDate.getTime(),
                 id: Date.now() + Math.random()
@@ -161,6 +163,7 @@
                     color: item.color || '#3b82f6',
                     dateType: item.dateType || 'normal',
                     subText: item.subText || '',
+                    bullets: item.bullets || [],
                     displayDate: this.formatDate(parsedDate, item.dateType || 'normal'),
                     timestamp: parsedDate.getTime(),
                     id: Date.now() + Math.random()
@@ -180,7 +183,8 @@
             date: item.date,
             color: item.color,
             dateType: item.dateType || 'normal',
-            ...(item.subText ? { subText: item.subText } : {})
+            ...(item.subText ? { subText: item.subText } : {}),
+            ...(item.bullets?.length ? { bullets: item.bullets } : {})
           }));
           const yamlString = jsyaml.dump(yamlData, { lineWidth: -1 });
           localStorage.setItem('timelineYaml', yamlString);
@@ -271,6 +275,13 @@
                 <span x-text="item.title"></span>
                 <template x-if="item.subText">
                   <div class="text-sm text-gray-400" style="margin-top: 0.1rem;" x-text="item.subText"></div>
+                </template>
+                <template x-if="item.bullets && item.bullets.length > 0">
+                  <ul class="list-disc list-inside text-sm text-gray-400 mt-1 ml-2">
+                    <template x-for="bullet in item.bullets" :key="bullet">
+                      <li x-text="bullet"></li>
+                    </template>
+                  </ul>
                 </template>
               </div>
               <button @click="deleteItem(item.id)" class="ml-2 opacity-0 group-hover:opacity-100 transition-opacity -mt-[3px]" title="Delete">
