@@ -378,21 +378,49 @@
 <input type="file" id="fileInput2" accept="*/*" style="display:none">
 
 <script>
-// ─── Utilities ───────────────────────────────────────────────────────────────
+// ─── Unicode normalisation ────────────────────────────────────────────────────
+// Collapses visually identical characters that differ at the byte level.
+// This is what causes ="0" to not match ="0" (curly vs straight quotes, etc.)
+
+function normaliseUnicode(s) {
+  return s
+    // Curly / smart quotes → straight
+    .replace(/[\u2018\u2019\u201A\u201B\u2032\u2035]/g, "'")
+    .replace(/[\u201C\u201D\u201E\u201F\u2033\u2036]/g, '"')
+    // Non-breaking & zero-width spaces → regular space
+    .replace(/[\u00A0\u200B\u200C\u200D\uFEFF]/g, ' ')
+    // En/em dash → hyphen
+    .replace(/[\u2013\u2014]/g, '-')
+    // Normalise CR+LF and bare CR to LF
+    .replace(/\r\n/g, '\n').replace(/\r/g, '\n')
+    // Unicode NFC normalisation (handles combining characters)
+    .normalize('NFC');
+}
+
+// ─── Format detection ─────────────────────────────────────────────────────────
 
 function detectFormat(text) {
   const t = text.trim();
   if (!t) return 'text';
-  if ((t.startsWith('{') || t.startsWith('[')) ) {
+  if (t.startsWith('{') || t.startsWith('[')) {
     try { JSON.parse(t); return 'json'; } catch {}
   }
   if (t.startsWith('<')) return 'html';
   return 'text';
 }
 
+function getFormat() {
+  const sel = document.getElementById('formatSelect').value;
+  if (sel !== 'auto') return sel;
+  const f1 = detectFormat(document.getElementById('text1').value);
+  const f2 = detectFormat(document.getElementById('text2').value);
+  return f1 === f2 ? f1 : (f1 !== 'text' ? f1 : f2);
+}
+
+// ─── Formatters ───────────────────────────────────────────────────────────────
+
 function formatJSON(text) {
-  const parsed = JSON.parse(text);
-  return JSON.stringify(parsed, null, 2);
+  return JSON.stringify(JSON.parse(text), null, 2);
 }
 
 function sortJSONKeys(obj) {
@@ -408,27 +436,38 @@ function sortJSONKeys(obj) {
 
 function formatHTML(text) {
   const tab = '  ';
-  const voidTags = new Set(['area','base','br','col','embed','hr','img','input','link','meta','param','source','track','wbr']);
+  const voidTags = new Set(['area','base','br','col','embed','hr','img','input',
+    'link','meta','param','source','track','wbr']);
 
-  // Split into alternating [text, tag, text, tag ...] parts
-  const parts = text.split(/(<[^>]*>)/);
+  // Step 1: collapse ALL existing whitespace between tokens so the input
+  // indentation never influences the output. Join everything, strip
+  // whitespace around tag boundaries, then split cleanly on tags.
+  const collapsed = text
+    .replace(/\s+/g, ' ')          // collapse all whitespace runs to single space
+    .replace(/>\s+</g, '><')       // remove spaces between tags
+    .replace(/>\s+/g, '>')         // remove space after closing >
+    .replace(/\s+</g, '<')         // remove space before opening <
+    .trim();
+
+  // Step 2: split into [text?, tag, text?, tag ...] tokens
+  const parts = collapsed.split(/(<[^>]*>)/);
+
   const result = [];
   let indent = 0;
 
-  for (let raw of parts) {
+  for (const raw of parts) {
     const part = raw.trim();
     if (!part) continue;
 
     if (!part.startsWith('<')) {
-      // Text node
       result.push(tab.repeat(indent) + part);
       continue;
     }
 
-    const isClose    = part.startsWith('</');
+    const isClose     = part.startsWith('</');
     const isSelfClose = part.endsWith('/>');
-    const tagName    = (part.match(/^<\/?([a-zA-Z][a-zA-Z0-9-]*)/) || [])[1] || '';
-    const isVoid     = voidTags.has(tagName.toLowerCase());
+    const tagName     = (part.match(/^<\/?([a-zA-Z][a-zA-Z0-9-]*)/) || [])[1] || '';
+    const isVoid      = voidTags.has(tagName.toLowerCase());
 
     if (isClose) {
       indent = Math.max(0, indent - 1);
@@ -454,36 +493,60 @@ function autoFormat(text, fmt) {
   return text;
 }
 
-function getFormat() {
-  const sel = document.getElementById('formatSelect').value;
-  if (sel !== 'auto') return sel;
-  const t1 = document.getElementById('text1').value;
-  const t2 = document.getElementById('text2').value;
-  const f1 = detectFormat(t1);
-  const f2 = detectFormat(t2);
-  return f1 === f2 ? f1 : (f1 !== 'text' ? f1 : f2);
+// ─── LCS (Patience diff) ──────────────────────────────────────────────────────
+
+function computeLCS(a, b) {
+  const bIndex = new Map();
+  b.forEach((line, i) => {
+    if (!bIndex.has(line)) bIndex.set(line, []);
+    bIndex.get(line).push(i);
+  });
+
+  const stacks = [];
+  const stackTops = [];
+
+  for (let ai = 0; ai < a.length; ai++) {
+    const matches = (bIndex.get(a[ai]) || []).slice().reverse();
+    for (const bi of matches) {
+      let lo = 0, hi = stackTops.length;
+      while (lo < hi) {
+        const mid = (lo + hi) >> 1;
+        if (stackTops[mid] < bi) lo = mid + 1; else hi = mid;
+      }
+      const prev = lo > 0 ? { si: lo - 1, pos: stacks[lo - 1].length - 1 } : null;
+      if (!stacks[lo]) stacks[lo] = [];
+      stacks[lo].push([ai, bi, prev]);
+      stackTops[lo] = bi;
+      break;
+    }
+  }
+
+  if (stacks.length === 0) return [];
+  const result = [];
+  let cur = { si: stacks.length - 1, pos: stacks[stacks.length - 1].length - 1 };
+  while (cur) {
+    const entry = stacks[cur.si][cur.pos];
+    result.push([entry[0], entry[1]]);
+    cur = entry[2] ? { si: entry[2].si, pos: entry[2].pos } : null;
+  }
+  return result.reverse();
 }
 
-// ─── LCS-based line diff ──────────────────────────────────────────────────────
+// ─── Line diff ────────────────────────────────────────────────────────────────
+
+function prepareText(raw) {
+  // Always normalise unicode first, then split lines
+  const text = normaliseUnicode(raw);
+  const ignoreWs = document.getElementById('btnIgnoreWs').classList.contains('active');
+  if (!ignoreWs) return text === '' ? [] : text.split('\n');
+  // Ignore whitespace: trim each line. Empty-after-trim lines are kept so
+  // line numbers stay meaningful, but they compare equal to other empty lines.
+  return text === '' ? [] : text.split('\n').map(l => l.trim());
+}
 
 function diffLines(a, b) {
-  const ignoreWs = document.getElementById('btnIgnoreWs').classList.contains('active');
-
-  // When ignoring whitespace, normalise the text BEFORE splitting into lines
-  // so that both comparison and display use the same content.
-  const normalize = s => ignoreWs
-    ? s.split('\n').map(l => l.trim()).filter((l, i, arr) => {
-        // Also collapse sequences of blank lines to one
-        return l !== '' || (i > 0 && arr[i - 1] !== '');
-      }).join('\n')
-    : s;
-
-  const ta = normalize(a);
-  const tb = normalize(b);
-
-  const aLines = ta === '' ? [] : ta.split('\n');
-  const bLines = tb === '' ? [] : tb.split('\n');
-
+  const aLines = prepareText(a);
+  const bLines = prepareText(b);
   const lcs = computeLCS(aLines, bLines);
 
   const ops = [];
@@ -496,97 +559,48 @@ function diffLines(a, b) {
   }
   while (ai < aLines.length) { ops.push({ type: 'del', left: aLines[ai] }); ai++; }
   while (bi < bLines.length) { ops.push({ type: 'ins', right: bLines[bi] }); bi++; }
-
   return ops;
 }
 
-function computeLCS(a, b) {
-  // Build index of b lines
-  const bIndex = new Map();
-  b.forEach((line, i) => {
-    if (!bIndex.has(line)) bIndex.set(line, []);
-    bIndex.get(line).push(i);
-  });
-
-  // Patience LCS
-  const stacks = []; // each stack: array of [ai, bi, prev_stack_idx, prev_stack_pos]
-  const stackTops = []; // top of each stack: bi value
-
-  for (let ai = 0; ai < a.length; ai++) {
-    const line = a[ai];
-    const matches = (bIndex.get(line) || []).slice().reverse(); // descending bi
-    for (const bi of matches) {
-      // Binary search for leftmost stack with top >= bi
-      let lo = 0, hi = stackTops.length;
-      while (lo < hi) {
-        const mid = (lo + hi) >> 1;
-        if (stackTops[mid] < bi) lo = mid + 1;
-        else hi = mid;
-      }
-      const prev = lo > 0 ? { si: lo - 1, pos: stacks[lo - 1].length - 1 } : null;
-      if (!stacks[lo]) stacks[lo] = [];
-      stacks[lo].push([ai, bi, prev]);
-      stackTops[lo] = bi;
-      break; // patience: only first (smallest bi)
-    }
-  }
-
-  // Backtrack
-  if (stacks.length === 0) return [];
-  const result = [];
-  let cur = { si: stacks.length - 1, pos: stacks[stacks.length - 1].length - 1 };
-  while (cur) {
-    const entry = stacks[cur.si][cur.pos];
-    result.push([entry[0], entry[1]]);
-    cur = entry[2] ? { si: entry[2].si, pos: entry[2].pos } : null;
-  }
-  return result.reverse();
-}
-
 // ─── Inline token diff ────────────────────────────────────────────────────────
-
-function tokenDiff(left, right) {
-  // Tokenise by word boundaries
-  const tokL = tokenize(left);
-  const tokR = tokenize(right);
-  const lcs = computeLCS(tokL, tokR);
-  
-  let li = 0, ri = 0, lOut = '', rOut = '';
-  for (const [la, lb] of lcs) {
-    while (li < la) { lOut += `<span class="token-del">${esc(tokL[li])}</span>`; li++; }
-    while (ri < lb) { rOut += `<span class="token-ins">${esc(tokR[ri])}</span>`; ri++; }
-    lOut += esc(tokL[li]); rOut += esc(tokR[ri]);
-    li++; ri++;
-  }
-  while (li < tokL.length) { lOut += `<span class="token-del">${esc(tokL[li])}</span>`; li++; }
-  while (ri < tokR.length) { rOut += `<span class="token-ins">${esc(tokR[ri])}</span>`; ri++; }
-  return { left: lOut, right: rOut };
-}
-
-function tokenize(s) {
-  return s.match(/\w+|\W/g) || (s ? [s] : []);
-}
 
 function esc(s) {
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
-// ─── Render diff ─────────────────────────────────────────────────────────────
+function tokenize(s) {
+  return s.match(/\S+|\s+/g) || (s ? [s] : []);
+}
+
+function tokenDiff(left, right) {
+  const tokL = tokenize(left);
+  const tokR = tokenize(right);
+  const lcs  = computeLCS(tokL, tokR);
+
+  let li = 0, ri = 0, lOut = '', rOut = '';
+  for (const [la, lb] of lcs) {
+    while (li < la) { lOut += `<span class="token-del">${esc(tokL[li++])}</span>`; }
+    while (ri < lb) { rOut += `<span class="token-ins">${esc(tokR[ri++])}</span>`; }
+    lOut += esc(tokL[li++]);
+    rOut += esc(tokR[ri++]);
+  }
+  while (li < tokL.length) { lOut += `<span class="token-del">${esc(tokL[li++])}</span>`; }
+  while (ri < tokR.length) { rOut += `<span class="token-ins">${esc(tokR[ri++])}</span>`; }
+  return { left: lOut, right: rOut };
+}
+
+// ─── Render ───────────────────────────────────────────────────────────────────
 
 function renderDiff(ops) {
-  // Group consecutive del+ins pairs for inline highlighting
-  // Pair up del/ins runs
   const rows = [];
   let i = 0;
   while (i < ops.length) {
-    const op = ops[i];
-    if (op.type === 'eq') {
-      rows.push({ type: 'eq', left: op.left, right: op.right });
+    if (ops[i].type === 'eq') {
+      rows.push({ type: 'eq', left: ops[i].left, right: ops[i].right });
       i++;
     } else {
-      // Collect run of del/ins
       const dels = [], inss = [];
-      while (i < ops.length && (ops[i].type === 'del' || ops[i].type === 'ins')) {
+      while (i < ops.length && ops[i].type !== 'eq') {
         if (ops[i].type === 'del') dels.push(ops[i].left);
         else inss.push(ops[i].right);
         i++;
@@ -606,47 +620,28 @@ function renderDiff(ops) {
     }
   }
 
-  // Count stats
   let adds = 0, dels2 = 0, sames = 0;
   for (const r of rows) {
-    if (r.type === 'ins') adds++;
+    if      (r.type === 'ins') adds++;
     else if (r.type === 'del') dels2++;
     else if (r.type === 'mod') { adds++; dels2++; }
     else sames++;
   }
 
-  // Build HTML table with context (show all lines, no collapsing for simplicity)
   let html = `<table class="diff-table"><colgroup>
     <col class="col-num"><col class="col-code"><col class="divider-col"><col class="col-num"><col class="col-code">
   </colgroup><tbody>`;
 
-  let leftLine = 1, rightLine = 1;
-
+  let ll = 1, rl = 1;
   for (const row of rows) {
     if (row.type === 'eq') {
-      html += `<tr>
-        <td class="line-num">${leftLine++}</td><td>${esc(row.left)}</td>
-        <td class="divider-col"></td>
-        <td class="line-num">${rightLine++}</td><td>${esc(row.right)}</td>
-      </tr>`;
+      html += `<tr><td class="line-num">${ll++}</td><td>${esc(row.left)}</td><td class="divider-col"></td><td class="line-num">${rl++}</td><td>${esc(row.right)}</td></tr>`;
     } else if (row.type === 'del') {
-      html += `<tr class="line-del">
-        <td class="line-num">${leftLine++}</td><td>${row.left}</td>
-        <td class="divider-col"></td>
-        <td class="line-num"></td><td class="line-empty"></td>
-      </tr>`;
+      html += `<tr class="line-del"><td class="line-num">${ll++}</td><td>${row.left}</td><td class="divider-col"></td><td class="line-num"></td><td></td></tr>`;
     } else if (row.type === 'ins') {
-      html += `<tr class="line-ins">
-        <td class="line-num"></td><td class="line-empty"></td>
-        <td class="divider-col"></td>
-        <td class="line-num">${rightLine++}</td><td>${row.right}</td>
-      </tr>`;
+      html += `<tr class="line-ins"><td class="line-num"></td><td></td><td class="divider-col"></td><td class="line-num">${rl++}</td><td>${row.right}</td></tr>`;
     } else if (row.type === 'mod') {
-      html += `<tr class="line-del">
-        <td class="line-num">${leftLine++}</td><td>${row.left}</td>
-        <td class="divider-col"></td>
-        <td class="line-num">${rightLine++}</td><td class="line-ins">${row.right}</td>
-      </tr>`;
+      html += `<tr><td class="line-num line-del">${ll++}</td><td class="line-del">${row.left}</td><td class="divider-col"></td><td class="line-num line-ins">${rl++}</td><td class="line-ins">${row.right}</td></tr>`;
     }
   }
 
@@ -654,12 +649,12 @@ function renderDiff(ops) {
   return { html, adds, dels: dels2, sames };
 }
 
-// ─── Main compare ─────────────────────────────────────────────────────────────
+// ─── Compare ─────────────────────────────────────────────────────────────────
 
 function compare() {
   const t1 = document.getElementById('text1').value;
   const t2 = document.getElementById('text2').value;
-  const output = document.getElementById('diffOutput');
+  const output   = document.getElementById('diffOutput');
   const statsBar = document.getElementById('diffStats');
 
   if (!t1 && !t2) {
@@ -671,6 +666,7 @@ function compare() {
   const ops = diffLines(t1, t2);
   const { html, adds, dels, sames } = renderDiff(ops);
 
+  statsBar.style.display = 'block';
   if (adds === 0 && dels === 0) {
     statsBar.innerHTML = `<div class="diff-identical">✓ Files are identical</div>`;
   } else {
@@ -680,17 +676,15 @@ function compare() {
       <span class="stat-same">${sames} unchanged</span>
     </div>`;
   }
-  statsBar.style.display = 'block';
   output.innerHTML = html;
 }
 
-// ─── Event Handlers ───────────────────────────────────────────────────────────
+// ─── Event handlers ───────────────────────────────────────────────────────────
 
 document.getElementById('btnCompare').addEventListener('click', compare);
 
 document.getElementById('btnIgnoreWs').addEventListener('click', () => {
-  const btn = document.getElementById('btnIgnoreWs');
-  btn.classList.toggle('active');
+  document.getElementById('btnIgnoreWs').classList.toggle('active');
   compare();
 });
 
@@ -707,60 +701,43 @@ document.getElementById('btnFormatBoth').addEventListener('click', () => {
   const fmt = getFormat();
   const ta1 = document.getElementById('text1');
   const ta2 = document.getElementById('text2');
-  const f1 = autoFormat(ta1.value, fmt);
-  const f2 = autoFormat(ta2.value, fmt);
-  if (f1 !== ta1.value || f2 !== ta2.value) {
-    ta1.value = f1;
-    ta2.value = f2;
-    compare();
-  }
+  ta1.value = autoFormat(ta1.value, fmt);
+  ta2.value = autoFormat(ta2.value, fmt);
+  compare();
 });
 
 document.getElementById('btnSortJson').addEventListener('click', () => {
   const ta1 = document.getElementById('text1');
   const ta2 = document.getElementById('text2');
-  let changed = false;
   [ta1, ta2].forEach(ta => {
     try {
-      const parsed = JSON.parse(ta.value.trim());
-      ta.value = JSON.stringify(sortJSONKeys(parsed), null, 2);
-      changed = true;
+      ta.value = JSON.stringify(sortJSONKeys(JSON.parse(ta.value.trim())), null, 2);
     } catch {}
   });
-  if (changed) compare();
+  compare();
 });
 
-// File loading
 function loadFile(inputId, textareaId, nameId) {
-  const input = document.getElementById(inputId);
-  input.addEventListener('change', e => {
+  document.getElementById(inputId).addEventListener('change', e => {
     const file = e.target.files[0];
     if (!file) return;
     const reader = new FileReader();
     reader.onload = ev => {
       document.getElementById(textareaId).value = ev.target.result;
       document.getElementById(nameId).textContent = file.name;
-      // Auto-detect format
-      const fmt = detectFormat(ev.target.result);
-      if (fmt !== 'text') {
-        const sel = document.getElementById('formatSelect');
-        if (sel.value === 'auto') { /* keep auto */ }
-      }
     };
     reader.readAsText(file);
-    input.value = '';
+    e.target.value = '';
   });
 }
 
 loadFile('fileInput1', 'text1', 'fileName1');
 loadFile('fileInput2', 'text2', 'fileName2');
 
-// Auto-compare on Ctrl+Enter
 document.addEventListener('keydown', e => {
   if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') compare();
 });
 
-// Live compare option (debounced)
 let liveTimer;
 ['text1','text2'].forEach(id => {
   document.getElementById(id).addEventListener('input', () => {
