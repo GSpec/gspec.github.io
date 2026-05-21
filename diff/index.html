@@ -86,6 +86,7 @@
   .btn.primary:hover { background: #d4eb00; }
   .btn.danger { border-color: var(--del); color: var(--del); }
   .btn.danger:hover { background: var(--del-bg); }
+  .btn.toggle.active { border-color: var(--accent2); color: var(--accent2); background: rgba(71,200,255,0.1); }
 
   select {
     font-family: var(--sans);
@@ -334,6 +335,8 @@
     <button class="btn" id="btnFormatBoth" title="Auto-format both panels">⚡ Format Both</button>
     <button class="btn" id="btnSortJson" title="Sort JSON keys alphabetically">⇅ Sort Keys</button>
     <div class="separator"></div>
+    <button class="btn toggle" id="btnIgnoreWs" title="Ignore leading/trailing whitespace when comparing">⎵ Ignore Whitespace</button>
+    <div class="separator"></div>
     <button class="btn primary" id="btnCompare">Compare</button>
     <button class="btn danger" id="btnClear">Clear</button>
   </div>
@@ -404,35 +407,66 @@ function sortJSONKeys(obj) {
 }
 
 function formatHTML(text) {
-  let indent = 0;
   const tab = '  ';
   const voidTags = new Set(['area','base','br','col','embed','hr','img','input','link','meta','param','source','track','wbr']);
-  
-  // Normalize: collapse whitespace between tags
-  const cleaned = text
-    .replace(/>\s+</g, '>\n<')
-    .replace(/^\s+|\s+$/gm, '');
+  const inlineTags = new Set(['a','abbr','b','bdi','bdo','br','cite','code','data','dfn','em','i','kbd','mark','q','rp','rt','ruby','s','samp','small','span','strong','sub','sup','time','u','var','wbr']);
+  const preTags = new Set(['pre','script','style','textarea']);
 
-  const lines = cleaned.split('\n');
-  const result = [];
-
-  for (let raw of lines) {
-    const line = raw.trim();
-    if (!line) continue;
-
-    const isClose = /^<\//.test(line);
-    const isSelfClose = /\/>$/.test(line);
-    const isOpen = /^<[^/!]/.test(line) && !isSelfClose;
-    const tagName = (line.match(/^<\/?([a-zA-Z0-9-]+)/) || [])[1] || '';
-    const isVoid = voidTags.has(tagName.toLowerCase());
-    const isDoctype = /^<!/.test(line);
-
-    if (isClose) indent = Math.max(0, indent - 1);
-    result.push(tab.repeat(indent) + line);
-    if (isOpen && !isVoid && !isDoctype) indent++;
+  // Tokenise into tag and text tokens
+  const tokens = [];
+  const re = /<!--[\s\S]*?-->|<!\[CDATA\[[\s\S]*?\]\]>|<[^>]+>|[^<]+/g;
+  let m;
+  while ((m = re.exec(text)) !== null) {
+    const raw = m[0];
+    if (raw.startsWith('<!--') || raw.startsWith('<![')) {
+      tokens.push({ kind: 'comment', raw });
+    } else if (raw.startsWith('<')) {
+      const selfClose = raw.endsWith('/>');
+      const isClose = raw.startsWith('</');
+      const tagName = (raw.match(/^<\/?([a-zA-Z][a-zA-Z0-9-]*)/) || [])[1] || '';
+      const lower = tagName.toLowerCase();
+      tokens.push({ kind: 'tag', raw, tagName: lower, isClose, selfClose, isVoid: voidTags.has(lower), isInline: inlineTags.has(lower), isPre: preTags.has(lower) });
+    } else {
+      const trimmed = raw.trim();
+      if (trimmed) tokens.push({ kind: 'text', raw: trimmed });
+    }
   }
 
-  return result.join('\n');
+  const lines = [];
+  let indent = 0;
+  let preDepth = 0;
+
+  for (const tok of tokens) {
+    if (preDepth > 0) {
+      // Inside pre/script/style — emit raw, only track close
+      if (tok.kind === 'tag' && tok.isClose && tok.isPre) {
+        preDepth--;
+        lines.push(tab.repeat(indent) + tok.raw);
+        indent = Math.max(0, indent - 1);
+      } else {
+        lines.push(tok.raw);
+      }
+      continue;
+    }
+
+    if (tok.kind === 'text') {
+      lines.push(tab.repeat(indent) + tok.raw);
+    } else if (tok.kind === 'comment') {
+      lines.push(tab.repeat(indent) + tok.raw);
+    } else if (tok.kind === 'tag') {
+      if (tok.isClose) {
+        indent = Math.max(0, indent - 1);
+        lines.push(tab.repeat(indent) + tok.raw);
+      } else if (tok.selfClose || tok.isVoid) {
+        lines.push(tab.repeat(indent) + tok.raw);
+      } else {
+        lines.push(tab.repeat(indent) + tok.raw);
+        if (tok.isPre) { preDepth++; } else { indent++; }
+      }
+    }
+  }
+
+  return lines.join('\n');
 }
 
 function autoFormat(text, fmt) {
@@ -458,14 +492,18 @@ function getFormat() {
 // ─── LCS-based line diff ──────────────────────────────────────────────────────
 
 function diffLines(a, b) {
+  const ignoreWs = document.getElementById('btnIgnoreWs').classList.contains('active');
   const aLines = a === '' ? [] : a.split('\n');
   const bLines = b === '' ? [] : b.split('\n');
-  
-  // Myers diff — simplified O(ND) patience approach via LCS
-  const lcs = computeLCS(aLines, bLines);
-  
-  // Build edit script
-  const ops = []; // { type: 'eq'|'del'|'ins', left?, right? }
+
+  // For comparison purposes, optionally normalise whitespace.
+  // We compare normalised keys but store original lines for display.
+  const normA = aLines.map(l => ignoreWs ? l.trim().replace(/\s+/g, ' ') : l);
+  const normB = bLines.map(l => ignoreWs ? l.trim().replace(/\s+/g, ' ') : l);
+
+  const lcs = computeLCS(normA, normB);
+
+  const ops = [];
   let ai = 0, bi = 0;
   for (const [la, lb] of lcs) {
     while (ai < la) { ops.push({ type: 'del', left: aLines[ai] }); ai++; }
@@ -475,7 +513,7 @@ function diffLines(a, b) {
   }
   while (ai < aLines.length) { ops.push({ type: 'del', left: aLines[ai] }); ai++; }
   while (bi < bLines.length) { ops.push({ type: 'ins', right: bLines[bi] }); bi++; }
-  
+
   return ops;
 }
 
@@ -666,6 +704,12 @@ function compare() {
 // ─── Event Handlers ───────────────────────────────────────────────────────────
 
 document.getElementById('btnCompare').addEventListener('click', compare);
+
+document.getElementById('btnIgnoreWs').addEventListener('click', () => {
+  const btn = document.getElementById('btnIgnoreWs');
+  btn.classList.toggle('active');
+  compare();
+});
 
 document.getElementById('btnClear').addEventListener('click', () => {
   document.getElementById('text1').value = '';
