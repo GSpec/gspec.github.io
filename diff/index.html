@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Diff Tool</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Syne:wght@400;600;700;800&display=swap');
+
+  :root {
+    --bg: #0d0e12;
+    --surface: #13151c;
+    --surface2: #1a1d27;
+    --border: #252836;
+    --accent: #e8ff47;
+    --accent2: #47c8ff;
+    --del: #ff4d6d;
+    --del-bg: #2a0e14;
+    --ins: #4dff91;
+    --ins-bg: #0a2016;
+    --mod-bg: #1a1a00;
+    --text: #e2e4f0;
+    --muted: #5a5f7a;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Syne', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  header {
+    padding: 18px 28px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+    background: var(--surface);
+  }
+
+  .logo {
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    color: var(--accent);
+    flex-shrink: 0;
+  }
+  .logo span { color: var(--text); }
+
+  .controls {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-left: auto;
+  }
+
+  .btn {
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 600;
+    padding: 8px 16px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+  }
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
+  .btn.primary {
+    background: var(--accent);
+    color: #0d0e12;
+    border-color: var(--accent);
+  }
+  .btn.primary:hover { background: #d4eb00; }
+  .btn.danger { border-color: var(--del); color: var(--del); }
+  .btn.danger:hover { background: var(--del-bg); }
+
+  select {
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 600;
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text);
+    cursor: pointer;
+    outline: none;
+  }
+  select:hover { border-color: var(--accent); }
+
+  .separator { width: 1px; height: 28px; background: var(--border); }
+
+  /* Input panels */
+  .input-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .panel-header {
+    background: var(--surface);
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .panel-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .file-btn {
+    font-family: var(--sans);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.15s;
+    margin-left: auto;
+  }
+  .file-btn:hover { border-color: var(--accent2); color: var(--accent2); }
+
+  .file-name {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent2);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 180px;
+  }
+
+  textarea {
+    width: 100%;
+    height: 280px;
+    background: var(--surface);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 1.6;
+    border: none;
+    outline: none;
+    resize: vertical;
+    padding: 14px 16px;
+    tab-size: 2;
+  }
+  textarea::placeholder { color: var(--muted); }
+
+  .panel { background: var(--surface); }
+
+  /* Diff output */
+  .diff-section {
+    flex: 1;
+    overflow: auto;
+    padding: 0;
+  }
+
+  .diff-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 200px;
+    color: var(--muted);
+    font-size: 14px;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .diff-empty .icon { font-size: 32px; opacity: 0.3; }
+
+  .diff-stats {
+    padding: 10px 20px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+  .stat-add { color: var(--ins); }
+  .stat-del { color: var(--del); }
+  .stat-same { color: var(--muted); }
+  .diff-identical {
+    color: var(--ins);
+    font-size: 13px;
+    padding: 10px 20px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* Side-by-side diff table */
+  .diff-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  .diff-table colgroup .col-num { width: 48px; }
+  .diff-table colgroup .col-code { width: 50%; }
+
+  .diff-table td {
+    padding: 0 12px;
+    vertical-align: top;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+
+  .line-num {
+    color: var(--muted);
+    text-align: right;
+    user-select: none;
+    font-size: 11px;
+    padding: 0 8px 0 4px !important;
+    border-right: 1px solid var(--border);
+    min-width: 40px;
+    white-space: nowrap;
+  }
+
+  .line-del { background: var(--del-bg); }
+  .line-ins { background: var(--ins-bg); }
+  .line-del td { }
+  .line-ins td { }
+
+  .line-del .line-num { color: var(--del); opacity: 0.7; border-right-color: #3a1020; }
+  .line-ins .line-num { color: var(--ins); opacity: 0.7; border-right-color: #0a3020; }
+
+  .token-del {
+    background: rgba(255, 77, 109, 0.35);
+    border-radius: 2px;
+    color: #ff8fa3;
+  }
+  .token-ins {
+    background: rgba(77, 255, 145, 0.3);
+    border-radius: 2px;
+    color: #7dffb0;
+  }
+
+  .divider-col { width: 1px; background: var(--border); padding: 0 !important; }
+
+  .line-empty td { background: #0f1016; }
+  .line-empty .line-num { color: transparent; }
+
+  .hunk-header td {
+    background: #1a1d2e;
+    color: var(--muted);
+    font-size: 11px;
+    padding: 3px 12px !important;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* Hidden file input */
+  input[type="file"] { display: none; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+  .badge {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 4px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+  .badge-json { background: rgba(232,255,71,0.15); color: var(--accent); border: 1px solid rgba(232,255,71,0.3); }
+  .badge-html { background: rgba(71,200,255,0.15); color: var(--accent2); border: 1px solid rgba(71,200,255,0.3); }
+
+  .format-options {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    padding: 8px 20px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+  .format-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-right: 4px;
+  }
+
+  @media (max-width: 768px) {
+    .input-row { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">diff<span>view</span></div>
+  <div class="controls">
+    <select id="formatSelect">
+      <option value="auto">Auto Detect</option>
+      <option value="json">JSON</option>
+      <option value="html">HTML</option>
+      <option value="text">Plain Text</option>
+    </select>
+    <div class="separator"></div>
+    <button class="btn" id="btnFormatBoth" title="Auto-format both panels">⚡ Format Both</button>
+    <button class="btn" id="btnSortJson" title="Sort JSON keys alphabetically">⇅ Sort Keys</button>
+    <div class="separator"></div>
+    <button class="btn primary" id="btnCompare">Compare</button>
+    <button class="btn danger" id="btnClear">Clear</button>
+  </div>
+</header>
+
+<div class="input-row">
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-label">Original</span>
+      <span class="file-name" id="fileName1"></span>
+      <button class="file-btn" onclick="document.getElementById('fileInput1').click()">📂 Open File</button>
+      <input type="file" id="fileInput1" accept="*/*">
+    </div>
+    <textarea id="text1" placeholder="Paste original content here, or open a file…" spellcheck="false"></textarea>
+  </div>
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-label">Modified</span>
+      <span class="file-name" id="fileName2"></span>
+      <button class="file-btn" onclick="document.getElementById('fileInput2').click()">📂 Open File</button>
+      <input type="file" id="fileInput2" accept="*/*">
+    </div>
+    <textarea id="text2" placeholder="Paste modified content here, or open a file…" spellcheck="false"></textarea>
+  </div>
+</div>
+
+<div id="diffStats" style="display:none">
+  <!-- stats bar populated by JS -->
+</div>
+
+<div class="diff-section" id="diffOutput">
+  <div class="diff-empty">
+    <div class="icon">⇄</div>
+    <div>Paste content and click <strong>Compare</strong></div>
+  </div>
+</div>
+
+<input type="file" id="fileInput1" accept="*/*" style="display:none">
+<input type="file" id="fileInput2" accept="*/*" style="display:none">
+
+<script>
+// ─── Utilities ───────────────────────────────────────────────────────────────
+
+function detectFormat(text) {
+  const t = text.trim();
+  if (!t) return 'text';
+  if ((t.startsWith('{') || t.startsWith('[')) ) {
+    try { JSON.parse(t); return 'json'; } catch {}
+  }
+  if (t.startsWith('<')) return 'html';
+  return 'text';
+}
+
+function formatJSON(text) {
+  const parsed = JSON.parse(text);
+  return JSON.stringify(parsed, null, 2);
+}
+
+function sortJSONKeys(obj) {
+  if (Array.isArray(obj)) return obj.map(sortJSONKeys);
+  if (obj !== null && typeof obj === 'object') {
+    return Object.keys(obj).sort().reduce((acc, k) => {
+      acc[k] = sortJSONKeys(obj[k]);
+      return acc;
+    }, {});
+  }
+  return obj;
+}
+
+function formatHTML(text) {
+  let indent = 0;
+  const tab = '  ';
+  const voidTags = new Set(['area','base','br','col','embed','hr','img','input','link','meta','param','source','track','wbr']);
+  
+  // Normalize: collapse whitespace between tags
+  const cleaned = text
+    .replace(/>\s+</g, '>\n<')
+    .replace(/^\s+|\s+$/gm, '');
+
+  const lines = cleaned.split('\n');
+  const result = [];
+
+  for (let raw of lines) {
+    const line = raw.trim();
+    if (!line) continue;
+
+    const isClose = /^<\//.test(line);
+    const isSelfClose = /\/>$/.test(line);
+    const isOpen = /^<[^/!]/.test(line) && !isSelfClose;
+    const tagName = (line.match(/^<\/?([a-zA-Z0-9-]+)/) || [])[1] || '';
+    const isVoid = voidTags.has(tagName.toLowerCase());
+    const isDoctype = /^<!/.test(line);
+
+    if (isClose) indent = Math.max(0, indent - 1);
+    result.push(tab.repeat(indent) + line);
+    if (isOpen && !isVoid && !isDoctype) indent++;
+  }
+
+  return result.join('\n');
+}
+
+function autoFormat(text, fmt) {
+  const t = text.trim();
+  if (!t) return text;
+  try {
+    if (fmt === 'json') return formatJSON(t);
+    if (fmt === 'html') return formatHTML(t);
+  } catch(e) {}
+  return text;
+}
+
+function getFormat() {
+  const sel = document.getElementById('formatSelect').value;
+  if (sel !== 'auto') return sel;
+  const t1 = document.getElementById('text1').value;
+  const t2 = document.getElementById('text2').value;
+  const f1 = detectFormat(t1);
+  const f2 = detectFormat(t2);
+  return f1 === f2 ? f1 : (f1 !== 'text' ? f1 : f2);
+}
+
+// ─── LCS-based line diff ──────────────────────────────────────────────────────
+
+function diffLines(a, b) {
+  const aLines = a === '' ? [] : a.split('\n');
+  const bLines = b === '' ? [] : b.split('\n');
+  
+  // Myers diff — simplified O(ND) patience approach via LCS
+  const lcs = computeLCS(aLines, bLines);
+  
+  // Build edit script
+  const ops = []; // { type: 'eq'|'del'|'ins', left?, right? }
+  let ai = 0, bi = 0;
+  for (const [la, lb] of lcs) {
+    while (ai < la) { ops.push({ type: 'del', left: aLines[ai] }); ai++; }
+    while (bi < lb) { ops.push({ type: 'ins', right: bLines[bi] }); bi++; }
+    ops.push({ type: 'eq', left: aLines[ai], right: bLines[bi] });
+    ai++; bi++;
+  }
+  while (ai < aLines.length) { ops.push({ type: 'del', left: aLines[ai] }); ai++; }
+  while (bi < bLines.length) { ops.push({ type: 'ins', right: bLines[bi] }); bi++; }
+  
+  return ops;
+}
+
+function computeLCS(a, b) {
+  // Build index of b lines
+  const bIndex = new Map();
+  b.forEach((line, i) => {
+    if (!bIndex.has(line)) bIndex.set(line, []);
+    bIndex.get(line).push(i);
+  });
+
+  // Patience LCS
+  const stacks = []; // each stack: array of [ai, bi, prev_stack_idx, prev_stack_pos]
+  const stackTops = []; // top of each stack: bi value
+
+  for (let ai = 0; ai < a.length; ai++) {
+    const line = a[ai];
+    const matches = (bIndex.get(line) || []).slice().reverse(); // descending bi
+    for (const bi of matches) {
+      // Binary search for leftmost stack with top >= bi
+      let lo = 0, hi = stackTops.length;
+      while (lo < hi) {
+        const mid = (lo + hi) >> 1;
+        if (stackTops[mid] < bi) lo = mid + 1;
+        else hi = mid;
+      }
+      const prev = lo > 0 ? { si: lo - 1, pos: stacks[lo - 1].length - 1 } : null;
+      if (!stacks[lo]) stacks[lo] = [];
+      stacks[lo].push([ai, bi, prev]);
+      stackTops[lo] = bi;
+      break; // patience: only first (smallest bi)
+    }
+  }
+
+  // Backtrack
+  if (stacks.length === 0) return [];
+  const result = [];
+  let cur = { si: stacks.length - 1, pos: stacks[stacks.length - 1].length - 1 };
+  while (cur) {
+    const entry = stacks[cur.si][cur.pos];
+    result.push([entry[0], entry[1]]);
+    cur = entry[2] ? { si: entry[2].si, pos: entry[2].pos } : null;
+  }
+  return result.reverse();
+}
+
+// ─── Inline token diff ────────────────────────────────────────────────────────
+
+function tokenDiff(left, right) {
+  // Tokenise by word boundaries
+  const tokL = tokenize(left);
+  const tokR = tokenize(right);
+  const lcs = computeLCS(tokL, tokR);
+  
+  let li = 0, ri = 0, lOut = '', rOut = '';
+  for (const [la, lb] of lcs) {
+    while (li < la) { lOut += `<span class="token-del">${esc(tokL[li])}</span>`; li++; }
+    while (ri < lb) { rOut += `<span class="token-ins">${esc(tokR[ri])}</span>`; ri++; }
+    lOut += esc(tokL[li]); rOut += esc(tokR[ri]);
+    li++; ri++;
+  }
+  while (li < tokL.length) { lOut += `<span class="token-del">${esc(tokL[li])}</span>`; li++; }
+  while (ri < tokR.length) { rOut += `<span class="token-ins">${esc(tokR[ri])}</span>`; ri++; }
+  return { left: lOut, right: rOut };
+}
+
+function tokenize(s) {
+  return s.match(/\w+|\W/g) || (s ? [s] : []);
+}
+
+function esc(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ─── Render diff ─────────────────────────────────────────────────────────────
+
+function renderDiff(ops) {
+  // Group consecutive del+ins pairs for inline highlighting
+  // Pair up del/ins runs
+  const rows = [];
+  let i = 0;
+  while (i < ops.length) {
+    const op = ops[i];
+    if (op.type === 'eq') {
+      rows.push({ type: 'eq', left: op.left, right: op.right });
+      i++;
+    } else {
+      // Collect run of del/ins
+      const dels = [], inss = [];
+      while (i < ops.length && (ops[i].type === 'del' || ops[i].type === 'ins')) {
+        if (ops[i].type === 'del') dels.push(ops[i].left);
+        else inss.push(ops[i].right);
+        i++;
+      }
+      const maxLen = Math.max(dels.length, inss.length);
+      for (let j = 0; j < maxLen; j++) {
+        const d = dels[j], ins = inss[j];
+        if (d !== undefined && ins !== undefined) {
+          const { left, right } = tokenDiff(d, ins);
+          rows.push({ type: 'mod', left, right });
+        } else if (d !== undefined) {
+          rows.push({ type: 'del', left: esc(d) });
+        } else {
+          rows.push({ type: 'ins', right: esc(ins) });
+        }
+      }
+    }
+  }
+
+  // Count stats
+  let adds = 0, dels2 = 0, sames = 0;
+  for (const r of rows) {
+    if (r.type === 'ins') adds++;
+    else if (r.type === 'del') dels2++;
+    else if (r.type === 'mod') { adds++; dels2++; }
+    else sames++;
+  }
+
+  // Build HTML table with context (show all lines, no collapsing for simplicity)
+  let html = `<table class="diff-table"><colgroup>
+    <col class="col-num"><col class="col-code"><col class="divider-col"><col class="col-num"><col class="col-code">
+  </colgroup><tbody>`;
+
+  let leftLine = 1, rightLine = 1;
+
+  for (const row of rows) {
+    if (row.type === 'eq') {
+      html += `<tr>
+        <td class="line-num">${leftLine++}</td><td>${esc(row.left)}</td>
+        <td class="divider-col"></td>
+        <td class="line-num">${rightLine++}</td><td>${esc(row.right)}</td>
+      </tr>`;
+    } else if (row.type === 'del') {
+      html += `<tr class="line-del">
+        <td class="line-num">${leftLine++}</td><td>${row.left}</td>
+        <td class="divider-col"></td>
+        <td class="line-num"></td><td class="line-empty"></td>
+      </tr>`;
+    } else if (row.type === 'ins') {
+      html += `<tr class="line-ins">
+        <td class="line-num"></td><td class="line-empty"></td>
+        <td class="divider-col"></td>
+        <td class="line-num">${rightLine++}</td><td>${row.right}</td>
+      </tr>`;
+    } else if (row.type === 'mod') {
+      html += `<tr class="line-del">
+        <td class="line-num">${leftLine++}</td><td>${row.left}</td>
+        <td class="divider-col"></td>
+        <td class="line-num">${rightLine++}</td><td class="line-ins">${row.right}</td>
+      </tr>`;
+    }
+  }
+
+  html += '</tbody></table>';
+  return { html, adds, dels: dels2, sames };
+}
+
+// ─── Main compare ─────────────────────────────────────────────────────────────
+
+function compare() {
+  const t1 = document.getElementById('text1').value;
+  const t2 = document.getElementById('text2').value;
+  const output = document.getElementById('diffOutput');
+  const statsBar = document.getElementById('diffStats');
+
+  if (!t1 && !t2) {
+    output.innerHTML = `<div class="diff-empty"><div class="icon">⇄</div><div>Paste content and click <strong>Compare</strong></div></div>`;
+    statsBar.style.display = 'none';
+    return;
+  }
+
+  const ops = diffLines(t1, t2);
+  const { html, adds, dels, sames } = renderDiff(ops);
+
+  if (adds === 0 && dels === 0) {
+    statsBar.innerHTML = `<div class="diff-identical">✓ Files are identical</div>`;
+  } else {
+    statsBar.innerHTML = `<div class="diff-stats">
+      <span class="stat-add">+${adds} addition${adds !== 1 ? 's' : ''}</span>
+      <span class="stat-del">−${dels} deletion${dels !== 1 ? 's' : ''}</span>
+      <span class="stat-same">${sames} unchanged</span>
+    </div>`;
+  }
+  statsBar.style.display = 'block';
+  output.innerHTML = html;
+}
+
+// ─── Event Handlers ───────────────────────────────────────────────────────────
+
+document.getElementById('btnCompare').addEventListener('click', compare);
+
+document.getElementById('btnClear').addEventListener('click', () => {
+  document.getElementById('text1').value = '';
+  document.getElementById('text2').value = '';
+  document.getElementById('fileName1').textContent = '';
+  document.getElementById('fileName2').textContent = '';
+  document.getElementById('diffOutput').innerHTML = `<div class="diff-empty"><div class="icon">⇄</div><div>Paste content and click <strong>Compare</strong></div></div>`;
+  document.getElementById('diffStats').style.display = 'none';
+});
+
+document.getElementById('btnFormatBoth').addEventListener('click', () => {
+  const fmt = getFormat();
+  const ta1 = document.getElementById('text1');
+  const ta2 = document.getElementById('text2');
+  const f1 = autoFormat(ta1.value, fmt);
+  const f2 = autoFormat(ta2.value, fmt);
+  if (f1 !== ta1.value || f2 !== ta2.value) {
+    ta1.value = f1;
+    ta2.value = f2;
+    compare();
+  }
+});
+
+document.getElementById('btnSortJson').addEventListener('click', () => {
+  const ta1 = document.getElementById('text1');
+  const ta2 = document.getElementById('text2');
+  let changed = false;
+  [ta1, ta2].forEach(ta => {
+    try {
+      const parsed = JSON.parse(ta.value.trim());
+      ta.value = JSON.stringify(sortJSONKeys(parsed), null, 2);
+      changed = true;
+    } catch {}
+  });
+  if (changed) compare();
+});
+
+// File loading
+function loadFile(inputId, textareaId, nameId) {
+  const input = document.getElementById(inputId);
+  input.addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      document.getElementById(textareaId).value = ev.target.result;
+      document.getElementById(nameId).textContent = file.name;
+      // Auto-detect format
+      const fmt = detectFormat(ev.target.result);
+      if (fmt !== 'text') {
+        const sel = document.getElementById('formatSelect');
+        if (sel.value === 'auto') { /* keep auto */ }
+      }
+    };
+    reader.readAsText(file);
+    input.value = '';
+  });
+}
+
+loadFile('fileInput1', 'text1', 'fileName1');
+loadFile('fileInput2', 'text2', 'fileName2');
+
+// Auto-compare on Ctrl+Enter
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') compare();
+});
+
+// Live compare option (debounced)
+let liveTimer;
+['text1','text2'].forEach(id => {
+  document.getElementById(id).addEventListener('input', () => {
+    clearTimeout(liveTimer);
+    liveTimer = setTimeout(compare, 600);
+  });
+});
+</script>
+</body>
+</html>
