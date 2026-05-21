@@ -409,64 +409,39 @@ function sortJSONKeys(obj) {
 function formatHTML(text) {
   const tab = '  ';
   const voidTags = new Set(['area','base','br','col','embed','hr','img','input','link','meta','param','source','track','wbr']);
-  const inlineTags = new Set(['a','abbr','b','bdi','bdo','br','cite','code','data','dfn','em','i','kbd','mark','q','rp','rt','ruby','s','samp','small','span','strong','sub','sup','time','u','var','wbr']);
-  const preTags = new Set(['pre','script','style','textarea']);
 
-  // Tokenise into tag and text tokens
-  const tokens = [];
-  const re = /<!--[\s\S]*?-->|<!\[CDATA\[[\s\S]*?\]\]>|<[^>]+>|[^<]+/g;
-  let m;
-  while ((m = re.exec(text)) !== null) {
-    const raw = m[0];
-    if (raw.startsWith('<!--') || raw.startsWith('<![')) {
-      tokens.push({ kind: 'comment', raw });
-    } else if (raw.startsWith('<')) {
-      const selfClose = raw.endsWith('/>');
-      const isClose = raw.startsWith('</');
-      const tagName = (raw.match(/^<\/?([a-zA-Z][a-zA-Z0-9-]*)/) || [])[1] || '';
-      const lower = tagName.toLowerCase();
-      tokens.push({ kind: 'tag', raw, tagName: lower, isClose, selfClose, isVoid: voidTags.has(lower), isInline: inlineTags.has(lower), isPre: preTags.has(lower) });
-    } else {
-      const trimmed = raw.trim();
-      if (trimmed) tokens.push({ kind: 'text', raw: trimmed });
-    }
-  }
-
-  const lines = [];
+  // Split into alternating [text, tag, text, tag ...] parts
+  const parts = text.split(/(<[^>]*>)/);
+  const result = [];
   let indent = 0;
-  let preDepth = 0;
 
-  for (const tok of tokens) {
-    if (preDepth > 0) {
-      // Inside pre/script/style — emit raw, only track close
-      if (tok.kind === 'tag' && tok.isClose && tok.isPre) {
-        preDepth--;
-        lines.push(tab.repeat(indent) + tok.raw);
-        indent = Math.max(0, indent - 1);
-      } else {
-        lines.push(tok.raw);
-      }
+  for (let raw of parts) {
+    const part = raw.trim();
+    if (!part) continue;
+
+    if (!part.startsWith('<')) {
+      // Text node
+      result.push(tab.repeat(indent) + part);
       continue;
     }
 
-    if (tok.kind === 'text') {
-      lines.push(tab.repeat(indent) + tok.raw);
-    } else if (tok.kind === 'comment') {
-      lines.push(tab.repeat(indent) + tok.raw);
-    } else if (tok.kind === 'tag') {
-      if (tok.isClose) {
-        indent = Math.max(0, indent - 1);
-        lines.push(tab.repeat(indent) + tok.raw);
-      } else if (tok.selfClose || tok.isVoid) {
-        lines.push(tab.repeat(indent) + tok.raw);
-      } else {
-        lines.push(tab.repeat(indent) + tok.raw);
-        if (tok.isPre) { preDepth++; } else { indent++; }
-      }
+    const isClose    = part.startsWith('</');
+    const isSelfClose = part.endsWith('/>');
+    const tagName    = (part.match(/^<\/?([a-zA-Z][a-zA-Z0-9-]*)/) || [])[1] || '';
+    const isVoid     = voidTags.has(tagName.toLowerCase());
+
+    if (isClose) {
+      indent = Math.max(0, indent - 1);
+      result.push(tab.repeat(indent) + part);
+    } else if (isSelfClose || isVoid) {
+      result.push(tab.repeat(indent) + part);
+    } else {
+      result.push(tab.repeat(indent) + part);
+      indent++;
     }
   }
 
-  return lines.join('\n');
+  return result.join('\n');
 }
 
 function autoFormat(text, fmt) {
@@ -493,15 +468,23 @@ function getFormat() {
 
 function diffLines(a, b) {
   const ignoreWs = document.getElementById('btnIgnoreWs').classList.contains('active');
-  const aLines = a === '' ? [] : a.split('\n');
-  const bLines = b === '' ? [] : b.split('\n');
 
-  // For comparison purposes, optionally normalise whitespace.
-  // We compare normalised keys but store original lines for display.
-  const normA = aLines.map(l => ignoreWs ? l.trim().replace(/\s+/g, ' ') : l);
-  const normB = bLines.map(l => ignoreWs ? l.trim().replace(/\s+/g, ' ') : l);
+  // When ignoring whitespace, normalise the text BEFORE splitting into lines
+  // so that both comparison and display use the same content.
+  const normalize = s => ignoreWs
+    ? s.split('\n').map(l => l.trim()).filter((l, i, arr) => {
+        // Also collapse sequences of blank lines to one
+        return l !== '' || (i > 0 && arr[i - 1] !== '');
+      }).join('\n')
+    : s;
 
-  const lcs = computeLCS(normA, normB);
+  const ta = normalize(a);
+  const tb = normalize(b);
+
+  const aLines = ta === '' ? [] : ta.split('\n');
+  const bLines = tb === '' ? [] : tb.split('\n');
+
+  const lcs = computeLCS(aLines, bLines);
 
   const ops = [];
   let ai = 0, bi = 0;
