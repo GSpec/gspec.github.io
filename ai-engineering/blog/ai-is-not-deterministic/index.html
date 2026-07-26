@@ -1,0 +1,87 @@
+<!DOCTYPE html><html lang="en" data-astro-cid-tldeq5d5><head><!-- Global Metadata --><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="icon" type="image/svg+xml" href="/favicon.svg"><link rel="icon" href="/favicon.ico"><link rel="sitemap" href="/sitemap-index.xml"><link rel="alternate" type="application/rss+xml" title="Modern Engineering with AI" href="https://gspec.githib.io/rss.xml"><meta name="generator" content="Astro v7.1.3"><style>@font-face{font-family:Atkinson-c7f4c4e8b285552f;src:url("/ai-engineering/_astro/fonts/89758defcfa85239.woff") format("woff");font-display:swap;font-weight:400;font-style:normal;}@font-face{font-family:Atkinson-c7f4c4e8b285552f;src:url("/ai-engineering/_astro/fonts/14aa8dd5744dd4bc.woff") format("woff");font-display:swap;font-weight:700;font-style:normal;}@font-face{font-family:"Atkinson-c7f4c4e8b285552f fallback: Arial";src:local("Arial");font-display:swap;font-weight:400;font-style:normal;size-adjust:99.3717%;ascent-override:80.1033%;descent-override:25.2587%;line-gap-override:0%;}@font-face{font-family:"Atkinson-c7f4c4e8b285552f fallback: Arial Bold";src:local("Arial Bold");font-display:swap;font-weight:700;font-style:normal;size-adjust:92.2954%;ascent-override:86.2448%;descent-override:27.1953%;line-gap-override:0%;}:root{--font-atkinson:Atkinson-c7f4c4e8b285552f,"Atkinson-c7f4c4e8b285552f fallback: Arial","Atkinson-c7f4c4e8b285552f fallback: Arial Bold",sans-serif;}</style><link rel="preload" href="/ai-engineering/_astro/fonts/89758defcfa85239.woff" as="font" type="font/woff" crossorigin><link rel="preload" href="/ai-engineering/_astro/fonts/14aa8dd5744dd4bc.woff" as="font" type="font/woff" crossorigin><!-- Canonical URL --><link rel="canonical" href="https://gspec.githib.io/ai-engineering/blog/ai-is-not-deterministic/"><!-- Primary Meta Tags --><title>Do we understand that AI is non-deterministic?</title><meta name="description" content="Lorem ipsum dolor sit amet"><!-- Open Graph / Facebook --><meta property="og:type" content="website"><meta property="og:url" content="https://gspec.githib.io/ai-engineering/blog/ai-is-not-deterministic/"><meta property="og:title" content="Do we understand that AI is non-deterministic?"><meta property="og:description" content="Lorem ipsum dolor sit amet"><meta property="og:image" content="https://gspec.githib.io/ai-engineering/_astro/blog-placeholder.gLBdjEDe.jpg"><!-- Twitter --><meta name="twitter:card" content="summary_large_image"><style>:root{--bg:11 16 32;--bg-gradient:rgb(var(--bg) / 85%), #000;--surface:#111827;--surface-2:#1f2937;--text:#f3f4f6;--text-muted:#9ca3af;--primary:#3ae5e7;--secondary:#ff6f61;--accent:#ffbd60;--accent-dark:#6e60ff;--black:15, 18, 25;--gray:96, 115, 159;--gray-light:229, 233, 240;--gray-dark:34, 41, 57;--box-shadow:0 2px 6px rgb(var(--gray) / 25%), 0 8px 24px rgb(var(--gray) / 33%), 0 16px 32px rgb(var(--gray) / 33%)}body{font-family:var(--font-atkinson);text-align:left;background:linear-gradient(var(--bg-gradient)) no-repeat;word-wrap:break-word;overflow-wrap:break-word;min-height:100vh;color:var(--text);margin:0;padding:0;font-size:20px;line-height:1.7}.content{padding:3em 1em}h1,h2,h3,h4,h5,h6{color:var(--text);margin:0 0 .5rem;line-height:1.2}h1{color:var(--accent);font-size:2.4rem;font-weight:700}h2{margin-top:2.5rem;font-size:1.8rem}h3{margin-top:2rem;font-size:1.4rem}h4{font-size:1.3rem}h5{font-size:1.2rem}strong,b{font-weight:700}a,a:hover{color:var(--accent)}p{margin-bottom:1em}.prose p{margin-bottom:2em}textarea{width:100%;font-size:16px}input{font-size:16px}table{width:100%}img{border-radius:8px;max-width:100%;height:auto}code{background-color:rgb(var(--gray-dark));border-radius:2px;padding:2px 5px}pre{border-radius:8px;padding:1.5em}pre>code{all:unset}blockquote{border-left:4px solid var(--accent-dark);margin:0;padding:0 0 0 20px;font-size:1.333em}hr{border:none;border-top:5px solid var(--accent)}@media (width<=720px){body{font-size:18px}}.sr-only{clip:rect(1px 1px 1px 1px);clip:rect(1px, 1px, 1px, 1px);clip-path:inset(50%);white-space:nowrap;border:0;width:1px;height:1px;margin:0;padding:0;overflow:hidden;position:absolute!important}.prose ul{padding-left:1.2rem;list-style:none}.prose ul li{padding-left:1.8rem;position:relative}.prose ul li:before,.prose ol li:before{content:"•";color:var(--accent);font-size:1.8em;line-height:1;position:absolute;top:-.08em;left:0}.prose ul li li:before,.prose ol li li:before{content:"-"}table{border-collapse:collapse;width:100%;margin:2rem 0}th,td{text-align:left;border-bottom:1px solid #ffffff1a;padding:1rem}th{background:#ffffff0d}footer[data-astro-cid-jo6i4kqk]{background:var(--primary);color:#0f172a;text-align:center;text-align:center;margin:0;padding:2em 2em 6em;font-weight:500}.social-links[data-astro-cid-jo6i4kqk]{justify-content:center;gap:1em;margin-top:1em;display:flex}.social-links[data-astro-cid-jo6i4kqk] a[data-astro-cid-jo6i4kqk]{color:rgb(var(--black));text-decoration:none}.social-links[data-astro-cid-jo6i4kqk] a[data-astro-cid-jo6i4kqk]:hover{color:rgb(var(--gray-dark));transform:translateY(-2px)}a[data-astro-cid-evkijfd6]{text-decoration:none;display:inline-block}a[data-astro-cid-evkijfd6].active{font-weight:bolder;text-decoration:underline}header[data-astro-cid-nen7h5rs]{z-index:1000;backdrop-filter:blur(8px);background:#00000080;margin:0;padding:0 1em;position:sticky;top:0;box-shadow:0 2px 8px #0000000d}nav[data-astro-cid-nen7h5rs] h2[data-astro-cid-nen7h5rs]{background-color:var(--primary);color:#0f172a;border-radius:6px;align-items:center;margin:0;padding:.4em .85em;font-size:1em;text-decoration:none;display:inline-flex}nav[data-astro-cid-nen7h5rs]{justify-content:space-between;align-items:center;display:flex}nav[data-astro-cid-nen7h5rs] a[data-astro-cid-nen7h5rs]{color:var(--black);border-bottom:4px solid #0000;padding:1em .5em;text-decoration:none}nav[data-astro-cid-nen7h5rs] a[data-astro-cid-nen7h5rs]:hover{border-bottom-color:var(--primary);text-decoration:none}nav[data-astro-cid-nen7h5rs] a[data-astro-cid-nen7h5rs].active{border-bottom-color:var(--accent);text-decoration:none}.social-links[data-astro-cid-nen7h5rs],.social-links[data-astro-cid-nen7h5rs] a[data-astro-cid-nen7h5rs]{display:flex}@media (width<=720px){.social-links[data-astro-cid-nen7h5rs]{display:none}}
+main[data-astro-cid-tldeq5d5]{width:calc(100% - 2em);max-width:100%;margin:0}.hero-image[data-astro-cid-tldeq5d5]{width:100vw;margin-bottom:1rem;margin-left:calc(50% - 50vw)}.hero-image[data-astro-cid-tldeq5d5] img[data-astro-cid-tldeq5d5]{object-fit:cover;border-radius:0;width:100%}.prose[data-astro-cid-tldeq5d5]{color:rgb(var(--text));padding:0 2em}.title[data-astro-cid-tldeq5d5]{text-align:left;max-width:100%;margin-bottom:1em;padding:2rem 0}.title[data-astro-cid-tldeq5d5] h1[data-astro-cid-tldeq5d5]{margin-top:.5rem}.date[data-astro-cid-tldeq5d5]{opacity:.7;font-size:.95rem}.last-updated-on[data-astro-cid-tldeq5d5]{font-style:italic}
+</style></head><body data-astro-cid-tldeq5d5><header data-astro-cid-nen7h5rs><nav data-astro-cid-nen7h5rs><h2 data-astro-cid-nen7h5rs>Modern Engineering with AI</h2><div class="internal-links" data-astro-cid-nen7h5rs><a href="/ai-engineering" data-astro-cid-nen7h5rs="true" data-astro-cid-evkijfd6="true">Home</a><a href="/ai-engineering/blog" class="active" data-astro-cid-nen7h5rs="true" data-astro-cid-evkijfd6="true">Blog</a><a href="/ai-engineering/about" data-astro-cid-nen7h5rs="true" data-astro-cid-evkijfd6="true">About</a></div><div class="social-links" data-astro-cid-nen7h5rs><a href="https://uk.linkedin.com/in/gareth-williams-99881221" target="_blank" data-astro-cid-nen7h5rs><span class="sr-only" data-astro-cid-nen7h5rs>Visit my LinkedIn profile</span><svg viewBox="0 0 24 24" aria-hidden="true" width="32" height="32" data-astro-cid-nen7h5rs><path fill="currentColor" d="M20.447 20.452H16.89V14.87c0-1.332-.027-3.045-1.856-3.045-1.857 0-2.142 1.45-2.142 2.948v5.68H9.336V9h3.414v1.561h.049c.476-.9 1.637-1.85 3.369-1.85 3.602 0 4.279 2.37 4.279 5.455v6.286zM5.337 7.433a2.063 2.063 0 1 1 0-4.126 2.063 2.063 0 0 1 0 4.126zM7.119 20.452H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" data-astro-cid-nen7h5rs></path></svg></a></div></nav></header><main data-astro-cid-tldeq5d5><article data-astro-cid-tldeq5d5><div class="hero-image" data-astro-cid-tldeq5d5><img src="/ai-engineering/_astro/non-deterministic.Bdkg9Yj8_Z1XzrDu.webp" alt data-astro-cid-tldeq5d5="true" loading="lazy" decoding="async" width="1020" height="510"></div><div class="prose" data-astro-cid-tldeq5d5><div class="title" data-astro-cid-tldeq5d5><div class="date" data-astro-cid-tldeq5d5><time datetime="2025-07-24T23:00:00.000Z">Jul 25, 2025</time></div><h1 data-astro-cid-tldeq5d5>Do we understand that AI is non-deterministic?</h1><hr data-astro-cid-tldeq5d5></div><p>The short answer: Most everyday users do not realize it, and even experienced software engineers struggle with the mental shift.</p>
+<p>Decades of interacting with technology have trained us to view software as a deterministic system. If you type 2 + 2 into a calculator, run a SQL query, or click a button in an app, you expect the exact same output every single time.</p>
+<p>Generative AI breaks this fundamental contract. Understanding why people struggle with this—and why the underlying systems behave this way—requires breaking down the psychological and technical gaps.</p>
+<h2 id="how-we-view-ai-the-predictive-text-misconception">How We View AI: The Predictive Text Misconception</h2>
+<p>Most non-technical users view Generative AI through one of two flawed mental models:</p>
+<ul>
+<li>
+<p>The Search Engine Model: They think the AI is retrieving a stored answer from a database. If the answer changes on a second attempt, they assume the AI “found better data” or “corrected itself,” rather than understanding it just generated a new probabilistic path.</p>
+</li>
+<li>
+<p>The Magic Black Box Model: When the AI gives two different answers, users often interpret it as human-like flakiness, indecisiveness, or “hallucination,” without grasping that randomness is an intentional parameter of the math.</p>
+</li>
+</ul>
+<p>Because modern software UI is polished and deterministic, users naturally project that same determinism onto LLMs. When an LLM fails to deliver consistency, users experience it as a defect rather than a core structural property of probabilistic computing.</p>
+<h2 id="why-ai-is-non-deterministic-even-at-temperature--0">Why AI is Non-Deterministic (Even at “Temperature = 0”)</h2>
+<p>Even when people realize AI isn’t a traditional database, they often assume setting the “temperature” parameter (the randomness knob) to 0 will make it 100% deterministic. In reality, non-determinism in modern AI occurs across multiple layers:</p>
+<h3 id="a-token-sampling--probability-distributions">A. Token Sampling &amp; Probability Distributions</h3>
+<p>An LLM doesn’t “know” facts; it calculates the probability of the next word (token) given all previous words.</p>
+<ul>
+<li>
+<p>At higher temperatures, it rolls a weighted die to pick from top candidates to foster “creativity.”</p>
+</li>
+<li>
+<p>At $T=0$ (greedy decoding), it always picks the top token. However…</p>
+</li>
+</ul>
+<h3 id="b-hardware--floating-point-variance-the-gpu-problem">B. Hardware &amp; Floating-Point Variance (The GPU Problem)</h3>
+<p>Even at $T=0$, modern GPUs run massive matrix multiplications in parallel across thousands of cores. Because floating-point addition in computer hardware is non-associative—meaning $(a + b) + c$ does not always bit-for-bit equal $a + (b + c)$ at extreme decimal precision—the order in which parallel threads finish calculation introduces micro-variations. A shift in the 15th decimal place of a token’s probability score can cause the model to pick a completely different word, swinging the rest of the sentence off in a new direction.</p>
+<h3 id="c-mixture-of-experts-moe-routing">C. Mixture of Experts (MoE) Routing</h3>
+<p>Models like GPT-4, Gemini, and Claude use MoE architectures, where different “expert” sub-networks handle different tokens. In high-throughput cloud infrastructure, token routing depends on batch composition and thread timing. If another user’s request is processed in the same server batch as yours, it can subtly shift which expert handles your request.</p>
+<h2 id="the-expectation-gap-across-user-archetypes">The Expectation Gap Across User Archetypes</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: left">User Group</th>
+<th style="text-align: left">Expectation</th>
+<th style="text-align: left">Realization Level</th>
+<th style="text-align: left">Primary Reaction to Variability</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left"><strong>General Public</strong></td>
+<td style="text-align: left">Deterministic (Database)</td>
+<td style="text-align: left"><strong>Very Low</strong></td>
+<td style="text-align: left">Frustration; loss of trust (“It lied to me,” “It’s broken”).</td>
+</tr>
+<tr>
+<td style="text-align: left"><strong>Business Leaders</strong></td>
+<td style="text-align: left">Deterministic (API / Feature)</td>
+<td style="text-align: left"><strong>Moderate</strong></td>
+<td style="text-align: left">Surprise when edge-case testing fails in production.</td>
+</tr>
+<tr>
+<td style="text-align: left"><strong>Software Engineers</strong></td>
+<td style="text-align: left">Deterministic (Logic / Rules)</td>
+<td style="text-align: left"><strong>High</strong></td>
+<td style="text-align: left">Structural discomfort; struggle to write tests for non-reproducible outputs.</td>
+</tr>
+<tr>
+<td style="text-align: left"><strong>AI Engineers</strong></td>
+<td style="text-align: left">Probabilistic (Distribution)</td>
+<td style="text-align: left"><strong>Complete</strong></td>
+<td style="text-align: left">Treat variability as a feature to be bounded by schemas, guardrails, and validation chains.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="why-this-expectation-gap-is-dangerous-for-software-teams">Why This Expectation Gap is Dangerous for Software Teams</h2>
+<p>In fields like fintech, medical software, or legal tech, the expectation of determinism is paramount. When traditional engineers try to build on top of non-deterministic LLMs, they run into three major hurdles:</p>
+<ul>
+<li>
+<p><strong>Broken Unit Testing</strong>: Traditional unit tests pass or fail based on expected outputs. You cannot write an exact-match unit test for an LLM because identical inputs don’t equal identical outputs.</p>
+</li>
+<li>
+<p><strong>Debugging Phantom Bugs</strong>: Finding the root cause of an error becomes probabilistic. If a user gets a bad output, an engineer attempting to reproduce the error in local testing might get a valid response every time.</p>
+</li>
+<li>
+<p><strong>Compliance &amp; Auditability</strong>: Regulatory bodies (e.g., FINRA, SEC, HIPAA) require audit trails. Demonstrating why a system made a specific automated decision becomes difficult if the system cannot replay the exact execution path.</p>
+</li>
+</ul>
+<h2 id="the-hybrid-solution">The Hybrid Solution</h2>
+<p>To bridge this gap, modern software architecture uses deterministic wrappers around non-deterministic engines:</p>
+<p><code>[ Unpredictable LLM Output ] ──► [ Schema Validation ] ──► [ Deterministic Business Logic ]</code></p>
+<p>By forcing LLMs to output structured data (like JSON following strict schemas) and passing those payloads into deterministic code (like traditional Python or C++ logic), engineering teams can harness the creative reasoning of AI without giving up the reliability of traditional computing.</p>
+</div></article></main><footer data-astro-cid-jo6i4kqk>&copy; 2026 Gareth Williams. All rights reserved.<div class="social-links" data-astro-cid-jo6i4kqk><a href="https://uk.linkedin.com/in/gareth-williams-99881221" target="_blank" data-astro-cid-jo6i4kqk><span class="sr-only" data-astro-cid-jo6i4kqk>Visit my LinkedIn profile</span><svg viewBox="0 0 24 24" aria-hidden="true" width="32" height="32" data-astro-cid-jo6i4kqk><path fill="currentColor" d="M20.447 20.452H16.89V14.87c0-1.332-.027-3.045-1.856-3.045-1.857 0-2.142 1.45-2.142 2.948v5.68H9.336V9h3.414v1.561h.049c.476-.9 1.637-1.85 3.369-1.85 3.602 0 4.279 2.37 4.279 5.455v6.286zM5.337 7.433a2.063 2.063 0 1 1 0-4.126 2.063 2.063 0 0 1 0 4.126zM7.119 20.452H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" data-astro-cid-jo6i4kqk></path></svg></a></div></footer></body></html>
