@@ -82,14 +82,21 @@
       white-space: nowrap;
     }
 
-    select, option, button {
+    select, button {
       border: 1px solid var(--border);
       border-radius: 0.75rem;
       background: rgba(var(--panel-2),0.95);
       color: var(--text);
       min-height: 2.15rem;
-      padding: 0.45rem 0.7rem;
       outline: none;
+    }
+
+    select {
+      padding: 0.3rem 1.2rem 0.45rem 0.7rem;
+    }
+
+    button {
+      padding: 0.3rem 0.7rem 0.45rem 0.7rem;
     }
 
     option {
