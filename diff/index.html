@@ -191,8 +191,12 @@
       width: 100%;
     }
 
-    .textarea-fallback {
+    .editor-host {
       display: none;
+    }
+
+    .textarea-fallback {
+      display: block;
       background: #0b1020;
       color: var(--text);
       border: 0;
@@ -427,9 +431,18 @@
         }
 
         window.require.config({ paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.53.0/min/vs' } });
+        setStatus('Textarea editing is ready. Loading enhanced editor...', 'warn');
         window.require(['vs/editor/editor.main'], function (monaco) {
           monacoRef = monaco;
           defineTheme(monaco);
+
+          // Textareas are the guaranteed usable baseline. Only hide them once
+          // Monaco has really loaded and we are about to create the editors.
+          els.leftEditor.style.display = 'block';
+          els.rightEditor.style.display = 'block';
+          els.leftFallback.style.display = 'none';
+          els.rightFallback.style.display = 'none';
+
           const common = {
             theme: 'plain-diff-dark',
             automaticLayout: true,
@@ -460,6 +473,16 @@
             localStorage.setItem(store.right, rightEditor.getValue());
             updateLanguage(rightEditor);
           });
+
+          setStatus('Ready.', '');
+          requestAnimationFrame(function () {
+            leftEditor.layout();
+            rightEditor.layout();
+          });
+          setTimeout(function () {
+            leftEditor.layout();
+            rightEditor.layout();
+          }, 250);
         }, function () {
           enableFallback('Monaco could not be loaded. Textarea fallback is active.');
         });
