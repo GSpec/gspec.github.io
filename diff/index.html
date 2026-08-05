@@ -810,76 +810,253 @@
         const rightLines = splitLines(rightText);
         const leftNorm = leftLines.map(normalizeLine);
         const rightNorm = rightLines.map(normalizeLine);
-        const chunks = window.Diff && window.Diff.diffArrays ? window.Diff.diffArrays(leftNorm, rightNorm) : fallbackChunks(leftNorm, rightNorm);
+        const ops = buildLineOperations(leftNorm, rightNorm);
         const rows = [];
         let li = 0;
         let ri = 0;
-        let pendingRemoved = [];
         let diffCount = 0;
+        let removedBuffer = [];
+        let addedBuffer = [];
 
-        function flushRemoved() {
-          pendingRemoved.forEach(function (item) {
-            rows.push({ type: 'removed', leftLineNo: item.lineNo, rightLineNo: '', left: item.text, right: '' });
-            diffCount += 1;
+        function pushChangedOrSeparate() {
+          const pairs = pairSimilarLines(removedBuffer, addedBuffer);
+          pairs.forEach(function (pair) {
+            if (pair.left !== null && pair.right !== null && pair.changed) {
+              rows.push({
+                type: 'changed',
+                leftLineNo: pair.left.lineNo,
+                rightLineNo: pair.right.lineNo,
+                left: pair.left.text,
+                right: pair.right.text
+              });
+              diffCount += 1;
+            } else {
+              if (pair.left !== null) {
+                rows.push({ type: 'removed', leftLineNo: pair.left.lineNo, rightLineNo: '', left: pair.left.text, right: '' });
+                diffCount += 1;
+              }
+              if (pair.right !== null) {
+                rows.push({ type: 'added', leftLineNo: '', rightLineNo: pair.right.lineNo, left: '', right: pair.right.text });
+                diffCount += 1;
+              }
+            }
           });
-          pendingRemoved = [];
+          removedBuffer = [];
+          addedBuffer = [];
         }
 
-        chunks.forEach(function (chunk) {
-          if (!chunk.added && !chunk.removed) {
-            flushRemoved();
-            chunk.value.forEach(function () {
-              rows.push({ type: 'equal', leftLineNo: li + 1, rightLineNo: ri + 1, left: leftLines[li] || '', right: rightLines[ri] || '' });
-              li += 1; ri += 1;
-            });
-            return;
-          }
-
-          if (chunk.removed) {
-            chunk.value.forEach(function () {
-              pendingRemoved.push({ lineNo: li + 1, text: leftLines[li] || '' });
-              li += 1;
-            });
-            return;
-          }
-
-          if (chunk.added) {
-            const added = [];
-            chunk.value.forEach(function () {
-              added.push({ lineNo: ri + 1, text: rightLines[ri] || '' });
-              ri += 1;
-            });
-            const pairCount = Math.min(pendingRemoved.length, added.length);
-            for (let i = 0; i < pairCount; i += 1) {
-              rows.push({ type: 'changed', leftLineNo: pendingRemoved[i].lineNo, rightLineNo: added[i].lineNo, left: pendingRemoved[i].text, right: added[i].text });
-              diffCount += 1;
-            }
-            for (let i = pairCount; i < pendingRemoved.length; i += 1) {
-              rows.push({ type: 'removed', leftLineNo: pendingRemoved[i].lineNo, rightLineNo: '', left: pendingRemoved[i].text, right: '' });
-              diffCount += 1;
-            }
-            for (let i = pairCount; i < added.length; i += 1) {
-              rows.push({ type: 'added', leftLineNo: '', rightLineNo: added[i].lineNo, left: '', right: added[i].text });
-              diffCount += 1;
-            }
-            pendingRemoved = [];
+        ops.forEach(function (op) {
+          if (op.type === 'equal') {
+            pushChangedOrSeparate();
+            rows.push({ type: 'equal', leftLineNo: li + 1, rightLineNo: ri + 1, left: leftLines[li] || '', right: rightLines[ri] || '' });
+            li += 1;
+            ri += 1;
+          } else if (op.type === 'remove') {
+            removedBuffer.push({ lineNo: li + 1, text: leftLines[li] || '', norm: leftNorm[li] || '' });
+            li += 1;
+          } else if (op.type === 'add') {
+            addedBuffer.push({ lineNo: ri + 1, text: rightLines[ri] || '', norm: rightNorm[ri] || '' });
+            ri += 1;
           }
         });
-        flushRemoved();
+        pushChangedOrSeparate();
         return { rows: rows, diffCount: diffCount };
       }
 
-      function fallbackChunks(leftNorm, rightNorm) {
-        const chunks = [];
-        const max = Math.max(leftNorm.length, rightNorm.length);
-        for (let i = 0; i < max; i += 1) {
-          if (leftNorm[i] === rightNorm[i]) chunks.push({ value: [leftNorm[i]] });
-          else {
-            if (i < leftNorm.length) chunks.push({ removed: true, value: [leftNorm[i]] });
-            if (i < rightNorm.length) chunks.push({ added: true, value: [rightNorm[i]] });
+      function buildLineOperations(leftNorm, rightNorm) {
+        const operations = [];
+        diffRange(0, leftNorm.length, 0, rightNorm.length, operations, leftNorm, rightNorm);
+        return operations;
+      }
+
+      function diffRange(aStart, aEnd, bStart, bEnd, operations, a, b) {
+        while (aStart < aEnd && bStart < bEnd && a[aStart] === b[bStart]) {
+          operations.push({ type: 'equal' });
+          aStart += 1;
+          bStart += 1;
+        }
+
+        const suffix = [];
+        while (aStart < aEnd && bStart < bEnd && a[aEnd - 1] === b[bEnd - 1]) {
+          suffix.push({ type: 'equal' });
+          aEnd -= 1;
+          bEnd -= 1;
+        }
+
+        if (aStart === aEnd) {
+          for (let j = bStart; j < bEnd; j += 1) operations.push({ type: 'add' });
+          appendSuffix(operations, suffix);
+          return;
+        }
+        if (bStart === bEnd) {
+          for (let i = aStart; i < aEnd; i += 1) operations.push({ type: 'remove' });
+          appendSuffix(operations, suffix);
+          return;
+        }
+
+        const anchors = findUniqueAnchors(a, b, aStart, aEnd, bStart, bEnd);
+        if (anchors.length) {
+          let lastA = aStart;
+          let lastB = bStart;
+          anchors.forEach(function (anchor) {
+            diffRange(lastA, anchor.a, lastB, anchor.b, operations, a, b);
+            operations.push({ type: 'equal' });
+            lastA = anchor.a + 1;
+            lastB = anchor.b + 1;
+          });
+          diffRange(lastA, aEnd, lastB, bEnd, operations, a, b);
+          appendSuffix(operations, suffix);
+          return;
+        }
+
+        const product = (aEnd - aStart) * (bEnd - bStart);
+        if (product <= 2500000) {
+          appendDpDiff(a, b, aStart, aEnd, bStart, bEnd, operations);
+        } else {
+          // Large totally unrelated blocks: avoid quadratic work. Show as remove/add.
+          for (let i = aStart; i < aEnd; i += 1) operations.push({ type: 'remove' });
+          for (let j = bStart; j < bEnd; j += 1) operations.push({ type: 'add' });
+        }
+        appendSuffix(operations, suffix);
+      }
+
+      function appendSuffix(operations, suffix) {
+        for (let i = suffix.length - 1; i >= 0; i -= 1) operations.push(suffix[i]);
+      }
+
+      function findUniqueAnchors(a, b, aStart, aEnd, bStart, bEnd) {
+        const left = new Map();
+        const right = new Map();
+        for (let i = aStart; i < aEnd; i += 1) {
+          const key = a[i];
+          if (!key) continue;
+          const current = left.get(key);
+          left.set(key, current ? { count: current.count + 1, index: current.index } : { count: 1, index: i });
+        }
+        for (let j = bStart; j < bEnd; j += 1) {
+          const key = b[j];
+          if (!key) continue;
+          const current = right.get(key);
+          right.set(key, current ? { count: current.count + 1, index: current.index } : { count: 1, index: j });
+        }
+        const pairs = [];
+        left.forEach(function (l, key) {
+          const r = right.get(key);
+          if (l.count === 1 && r && r.count === 1) pairs.push({ a: l.index, b: r.index });
+        });
+        pairs.sort(function (x, y) { return x.a - y.a || x.b - y.b; });
+        return longestIncreasingSubsequenceByRightIndex(pairs);
+      }
+
+      function longestIncreasingSubsequenceByRightIndex(pairs) {
+        if (!pairs.length) return [];
+        const piles = [];
+        const predecessors = new Array(pairs.length).fill(-1);
+        const pileTops = [];
+        for (let i = 0; i < pairs.length; i += 1) {
+          let lo = 0;
+          let hi = piles.length;
+          while (lo < hi) {
+            const mid = (lo + hi) >> 1;
+            if (pairs[piles[mid]].b < pairs[i].b) lo = mid + 1;
+            else hi = mid;
+          }
+          if (lo > 0) predecessors[i] = piles[lo - 1];
+          piles[lo] = i;
+          pileTops[lo] = i;
+        }
+        let k = piles[piles.length - 1];
+        const result = [];
+        while (k >= 0) {
+          result.push(pairs[k]);
+          k = predecessors[k];
+        }
+        return result.reverse();
+      }
+
+      function appendDpDiff(a, b, aStart, aEnd, bStart, bEnd, operations) {
+        const n = aEnd - aStart;
+        const m = bEnd - bStart;
+        const dp = Array.from({ length: n + 1 }, function () { return new Uint16Array(m + 1); });
+        for (let i = n - 1; i >= 0; i -= 1) {
+          for (let j = m - 1; j >= 0; j -= 1) {
+            dp[i][j] = a[aStart + i] === b[bStart + j]
+              ? dp[i + 1][j + 1] + 1
+              : Math.max(dp[i + 1][j], dp[i][j + 1]);
           }
         }
-        return chunks;
+        let i = 0;
+        let j = 0;
+        while (i < n && j < m) {
+          if (a[aStart + i] === b[bStart + j]) {
+            operations.push({ type: 'equal' });
+            i += 1;
+            j += 1;
+          } else if (dp[i + 1][j] >= dp[i][j + 1]) {
+            operations.push({ type: 'remove' });
+            i += 1;
+          } else {
+            operations.push({ type: 'add' });
+            j += 1;
+          }
+        }
+        while (i < n) { operations.push({ type: 'remove' }); i += 1; }
+        while (j < m) { operations.push({ type: 'add' }); j += 1; }
+      }
+
+      function pairSimilarLines(removed, added) {
+        const result = [];
+        const usedAdded = new Set();
+        removed.forEach(function (leftItem) {
+          let bestIndex = -1;
+          let bestScore = 0;
+          added.forEach(function (rightItem, index) {
+            if (usedAdded.has(index)) return;
+            const score = lineSimilarity(leftItem.norm, rightItem.norm);
+            if (score > bestScore) {
+              bestScore = score;
+              bestIndex = index;
+            }
+          });
+          if (bestIndex >= 0 && bestScore >= 0.48) {
+            usedAdded.add(bestIndex);
+            result.push({ left: leftItem, right: added[bestIndex], changed: true });
+          } else {
+            result.push({ left: leftItem, right: null, changed: false });
+          }
+        });
+        added.forEach(function (rightItem, index) {
+          if (!usedAdded.has(index)) result.push({ left: null, right: rightItem, changed: false });
+        });
+        return result;
+      }
+
+      function lineSimilarity(a, b) {
+        if (a === b) return 1;
+        if (!a || !b) return 0;
+        const maxLen = Math.max(a.length, b.length);
+        if (maxLen > 600) {
+          let prefix = 0;
+          const limit = Math.min(a.length, b.length, 200);
+          while (prefix < limit && a[prefix] === b[prefix]) prefix += 1;
+          return prefix / Math.max(a.length, b.length);
+        }
+        const n = a.length;
+        const m = b.length;
+        let previous = new Uint16Array(m + 1);
+        let current = new Uint16Array(m + 1);
+        for (let i = 1; i <= n; i += 1) {
+          for (let j = 1; j <= m; j += 1) {
+            current[j] = a[i - 1] === b[j - 1]
+              ? previous[j - 1] + 1
+              : Math.max(previous[j], current[j - 1]);
+          }
+          const temp = previous;
+          previous = current;
+          current = temp;
+          current.fill(0);
+        }
+        return previous[m] / maxLen;
       }
 
       function renderDiff(rows) {
