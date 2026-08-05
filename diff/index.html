@@ -82,7 +82,7 @@
       white-space: nowrap;
     }
 
-    select, button {
+    select, option, button {
       border: 1px solid var(--border);
       border-radius: 0.75rem;
       background: rgba(var(--panel-2),0.95);
@@ -90,6 +90,11 @@
       min-height: 2.15rem;
       padding: 0.45rem 0.7rem;
       outline: none;
+    }
+
+    option {
+      background: rgba(var(--panel-2),0.95);
+      color: var(--text);
     }
 
     select:focus, button:focus-visible, input:focus-visible {
