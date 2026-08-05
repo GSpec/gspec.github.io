@@ -1,750 +1,970 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Diff Tool</title>
-<style>
-  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Syne:wght@400;600;700;800&display=swap');
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="dark" />
+  <title>Text Diff</title>
+  <style>
+    :root {
+      --bg: 11 16 32;
+      --panel: 17 24 45;
+      --panel-2: 23 31 55;
+      --text: #F3F4F6;
+      --text-muted: #9CA3AF;
+      --primary: #3AE5E7;
+      --secondary: #FF6F61;
+      --accent: #FFBD60;
+      --accent-dark: #8b8b8b8e;
+      --border: rgba(243,244,246,0.12);
+      --shadow: rgba(0,0,0,0.22);
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --add-soft: rgba(58,229,231,0.14);
+      --add-strong: rgba(58,229,231,0.38);
+      --remove-soft: rgba(255,111,97,0.14);
+      --remove-strong: rgba(255,111,97,0.38);
+      --change-soft: rgba(255,189,96,0.14);
+      --change-strong: rgba(255,189,96,0.38);
+    }
 
-  :root {
-    --bg: #0d0e12;
-    --surface: #13151c;
-    --surface2: #1a1d27;
-    --border: #252836;
-    --accent: #e8ff47;
-    --accent2: #47c8ff;
-    --del: #ff4d6d;
-    --del-bg: #2a0e14;
-    --ins: #4dff91;
-    --ins-bg: #0a2016;
-    --mod-bg: #1a1a00;
-    --text: #e2e4f0;
-    --muted: #5a5f7a;
-    --mono: 'JetBrains Mono', monospace;
-    --sans: 'Syne', sans-serif;
-  }
+    * { box-sizing: border-box; }
 
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: rgb(var(--bg));
+      color: var(--text);
+      font-family: var(--sans);
+    }
 
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--sans);
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-  }
+    body { min-width: 320px; }
 
-  header {
-    padding: 18px 28px;
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    gap: 20px;
-    flex-wrap: wrap;
-    background: var(--surface);
-  }
+    button, select, input { font: inherit; }
 
-  .logo {
-    font-size: 20px;
-    font-weight: 800;
-    letter-spacing: -0.5px;
-    color: var(--accent);
-    flex-shrink: 0;
-  }
-  .logo span { color: var(--text); }
+    .app {
+      height: 100vh;
+      width: 100%;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      background:
+        radial-gradient(circle at top left, rgba(58,229,231,0.07), transparent 28rem),
+        linear-gradient(180deg, rgba(17,24,45,0.72), rgba(11,16,32,1));
+    }
 
-  .controls {
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-    align-items: center;
-    margin-left: auto;
-  }
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.65rem;
+      align-items: center;
+      padding: 0.75rem;
+      border-bottom: 1px solid var(--border);
+      background: rgba(var(--panel),0.82);
+      box-shadow: 0 10px 25px var(--shadow);
+      z-index: 10;
+    }
 
-  .btn {
-    font-family: var(--sans);
-    font-size: 13px;
-    font-weight: 600;
-    padding: 8px 16px;
-    border-radius: 6px;
-    border: 1px solid var(--border);
-    background: var(--surface2);
-    color: var(--text);
-    cursor: pointer;
-    transition: all 0.15s;
-    letter-spacing: 0.3px;
-    white-space: nowrap;
-  }
-  .btn:hover { border-color: var(--accent); color: var(--accent); }
-  .btn.primary {
-    background: var(--accent);
-    color: #0d0e12;
-    border-color: var(--accent);
-  }
-  .btn.primary:hover { background: #d4eb00; }
-  .btn.danger { border-color: var(--del); color: var(--del); }
-  .btn.danger:hover { background: var(--del-bg); }
-  .btn.toggle.active { border-color: var(--accent2); color: var(--accent2); background: rgba(71,200,255,0.1); }
+    .toolbar-group {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      flex-wrap: wrap;
+    }
 
-  select {
-    font-family: var(--sans);
-    font-size: 13px;
-    font-weight: 600;
-    padding: 8px 12px;
-    border-radius: 6px;
-    border: 1px solid var(--border);
-    background: var(--surface2);
-    color: var(--text);
-    cursor: pointer;
-    outline: none;
-  }
-  select:hover { border-color: var(--accent); }
+    label {
+      color: var(--text-muted);
+      font-size: 0.82rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      white-space: nowrap;
+    }
 
-  .separator { width: 1px; height: 28px; background: var(--border); }
+    select, button {
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      background: rgba(var(--panel-2),0.95);
+      color: var(--text);
+      min-height: 2.15rem;
+      padding: 0.45rem 0.7rem;
+      outline: none;
+    }
 
-  /* Input panels */
-  .input-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1px;
-    background: var(--border);
-    border-bottom: 1px solid var(--border);
-  }
+    select:focus, button:focus-visible, input:focus-visible {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(58,229,231,0.16);
+    }
 
-  .panel-header {
-    background: var(--surface);
-    padding: 10px 16px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    border-bottom: 1px solid var(--border);
-  }
+    button {
+      cursor: pointer;
+      transition: transform 120ms ease, border-color 120ms ease, background 120ms ease;
+    }
 
-  .panel-label {
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
-    color: var(--muted);
-  }
+    button:hover:not(:disabled) {
+      transform: translateY(-1px);
+      border-color: rgba(58,229,231,0.42);
+      background: rgba(32,43,72,0.95);
+    }
 
-  .file-btn {
-    font-family: var(--sans);
-    font-size: 11px;
-    font-weight: 600;
-    padding: 4px 10px;
-    border-radius: 4px;
-    border: 1px solid var(--border);
-    background: transparent;
-    color: var(--muted);
-    cursor: pointer;
-    transition: all 0.15s;
-    margin-left: auto;
-  }
-  .file-btn:hover { border-color: var(--accent2); color: var(--accent2); }
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.48;
+    }
 
-  .file-name {
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--accent2);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    max-width: 180px;
-  }
+    .primary-action {
+      border-color: rgba(58,229,231,0.42);
+      color: var(--primary);
+    }
 
-  textarea {
-    width: 100%;
-    height: 280px;
-    background: var(--surface);
-    color: var(--text);
-    font-family: var(--mono);
-    font-size: 13px;
-    line-height: 1.6;
-    border: none;
-    outline: none;
-    resize: vertical;
-    padding: 14px 16px;
-    tab-size: 2;
-  }
-  textarea::placeholder { color: var(--muted); }
+    .secondary-action { color: var(--text-muted); }
 
-  .panel { background: var(--surface); }
+    .danger-action {
+      color: var(--secondary);
+      border-color: rgba(255,111,97,0.28);
+    }
 
-  /* Diff output */
-  .diff-section {
-    flex: 1;
-    overflow: auto;
-    padding: 0;
-  }
+    input[type="checkbox"] {
+      accent-color: var(--primary);
+    }
 
-  .diff-empty {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 200px;
-    color: var(--muted);
-    font-size: 14px;
-    flex-direction: column;
-    gap: 8px;
-  }
-  .diff-empty .icon { font-size: 32px; opacity: 0.3; }
+    .status {
+      margin-left: auto;
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      min-height: 1.2rem;
+      white-space: nowrap;
+    }
 
-  .diff-stats {
-    padding: 10px 20px;
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    gap: 20px;
-    align-items: center;
-    font-size: 12px;
-    font-weight: 600;
-    letter-spacing: 0.5px;
-  }
-  .stat-add { color: var(--ins); }
-  .stat-del { color: var(--del); }
-  .stat-same { color: var(--muted); }
-  .diff-identical {
-    color: var(--ins);
-    font-size: 13px;
-    padding: 10px 20px;
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
-  }
+    .status.ok { color: var(--primary); }
+    .status.diff { color: var(--secondary); }
+    .status.warn { color: var(--accent); }
 
-  /* Side-by-side diff table */
-  .diff-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-family: var(--mono);
-    font-size: 13px;
-    line-height: 1.6;
-  }
+    .main {
+      min-height: 0;
+      display: grid;
+      grid-template-rows: minmax(0, 1fr);
+      padding: 0.75rem;
+      gap: 0.75rem;
+    }
 
-  .diff-table colgroup .col-num { width: 48px; }
-  .diff-table colgroup .col-code { width: 50%; }
+    .editor-grid, .diff-grid {
+      min-height: 0;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 0.75rem;
+    }
 
-  .diff-table td {
-    padding: 0 12px;
-    vertical-align: top;
-    white-space: pre-wrap;
-    word-break: break-all;
-  }
+    .panel {
+      min-height: 0;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      border: 1px solid var(--border);
+      border-radius: 1rem;
+      background: rgba(var(--panel),0.72);
+      overflow: hidden;
+      box-shadow: 0 18px 45px var(--shadow);
+    }
 
-  .line-num {
-    color: var(--muted);
-    text-align: right;
-    user-select: none;
-    font-size: 11px;
-    padding: 0 8px 0 4px !important;
-    border-right: 1px solid var(--border);
-    min-width: 40px;
-    white-space: nowrap;
-  }
+    .panel-header {
+      min-height: 2.55rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      padding: 0.55rem 0.7rem;
+      border-bottom: 1px solid var(--border);
+      background: rgba(var(--panel-2),0.62);
+      color: var(--text-muted);
+      font-size: 0.84rem;
+    }
 
-  .line-del { background: var(--del-bg); }
-  .line-ins { background: var(--ins-bg); }
-  .line-del td { }
-  .line-ins td { }
+    .panel-header strong {
+      color: var(--text);
+      font-weight: 600;
+    }
 
-  .line-del .line-num { color: var(--del); opacity: 0.7; border-right-color: #3a1020; }
-  .line-ins .line-num { color: var(--ins); opacity: 0.7; border-right-color: #0a3020; }
+    .editor-host, .textarea-fallback {
+      min-height: 0;
+      height: 100%;
+      width: 100%;
+    }
 
-  .token-del {
-    background: rgba(255, 77, 109, 0.35);
-    border-radius: 2px;
-    color: #ff8fa3;
-  }
-  .token-ins {
-    background: rgba(77, 255, 145, 0.3);
-    border-radius: 2px;
-    color: #7dffb0;
-  }
+    .textarea-fallback {
+      display: none;
+      background: #0b1020;
+      color: var(--text);
+      border: 0;
+      outline: 0;
+      resize: none;
+      padding: 1rem;
+      font-family: var(--mono);
+      font-size: 13px;
+      line-height: 1.5;
+    }
 
-  .divider-col { width: 1px; background: var(--border); padding: 0 !important; }
+    .diff-pane {
+      min-height: 0;
+      overflow: auto;
+      font-family: var(--mono);
+      font-size: 13px;
+      line-height: 1.5;
+      background: #0b1020;
+      scrollbar-color: rgba(156,163,175,0.5) transparent;
+    }
 
-  .line-empty td { background: #0f1016; }
-  .line-empty .line-num { color: transparent; }
+    .diff-table {
+      display: table;
+      width: 100%;
+      border-collapse: collapse;
+    }
 
-  .hunk-header td {
-    background: #1a1d2e;
-    color: var(--muted);
-    font-size: 11px;
-    padding: 3px 12px !important;
-    border-top: 1px solid var(--border);
-    border-bottom: 1px solid var(--border);
-  }
+    .diff-row { display: table-row; }
+    .diff-row.current .line-number { color: var(--primary); }
+    .diff-row.current .line-content { outline: 1px solid rgba(58,229,231,0.6); outline-offset: -1px; }
 
-  /* Hidden file input */
-  input[type="file"] { display: none; }
+    .line-number, .line-content {
+      display: table-cell;
+      vertical-align: top;
+      border-bottom: 1px solid rgba(243,244,246,0.04);
+    }
 
-  /* Scrollbar */
-  ::-webkit-scrollbar { width: 6px; height: 6px; }
-  ::-webkit-scrollbar-track { background: var(--bg); }
-  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-  ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+    .line-number {
+      width: 4.2rem;
+      min-width: 4.2rem;
+      text-align: right;
+      user-select: none;
+      color: rgba(156,163,175,0.72);
+      padding: 0.05rem 0.65rem 0.05rem 0.35rem;
+      background: rgba(17,24,45,0.62);
+      border-right: 1px solid rgba(243,244,246,0.07);
+    }
 
-  .badge {
-    font-size: 10px;
-    font-weight: 700;
-    padding: 2px 7px;
-    border-radius: 4px;
-    letter-spacing: 0.5px;
-    text-transform: uppercase;
-  }
-  .badge-json { background: rgba(232,255,71,0.15); color: var(--accent); border: 1px solid rgba(232,255,71,0.3); }
-  .badge-html { background: rgba(71,200,255,0.15); color: var(--accent2); border: 1px solid rgba(71,200,255,0.3); }
+    .line-content {
+      white-space: pre;
+      padding: 0.05rem 0.8rem;
+      min-width: 100%;
+    }
 
-  .format-options {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    padding: 8px 20px;
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
-    flex-wrap: wrap;
-  }
-  .format-label {
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    color: var(--muted);
-    margin-right: 4px;
-  }
+    .wrap .line-content { white-space: pre-wrap; overflow-wrap: anywhere; }
 
-  @media (max-width: 768px) {
-    .input-row { grid-template-columns: 1fr; }
-  }
-</style>
+    .line-added .line-content { background: var(--add-soft); }
+    .line-removed .line-content { background: var(--remove-soft); }
+    .line-changed .line-content { background: var(--change-soft); }
+    .line-blank .line-content { background: rgba(156,163,175,0.04); }
+
+    .mark-added, .mark-removed, .mark-changed {
+      border-radius: 0.2rem;
+      padding: 0 0.04rem;
+    }
+
+    .mark-added { background: var(--add-strong); color: var(--text); }
+    .mark-removed { background: var(--remove-strong); color: var(--text); }
+    .mark-changed { background: var(--change-strong); color: var(--text); }
+
+    .hidden { display: none !important; }
+
+    .monaco-editor, .monaco-diff-editor, .monaco-editor-background, .monaco-editor .margin {
+      background-color: #0b1020 !important;
+    }
+
+    @media (max-width: 820px) {
+      .toolbar { align-items: stretch; }
+      .toolbar-group { width: 100%; }
+      .status { width: 100%; margin-left: 0; }
+      .editor-grid, .diff-grid { grid-template-columns: 1fr; }
+      .main { padding: 0.55rem; }
+    }
+  </style>
 </head>
 <body>
+  <div class="app">
+    <div class="toolbar" role="toolbar" aria-label="Diff controls">
+      <div class="toolbar-group">
+        <label for="formatSelect">Format</label>
+        <select id="formatSelect" aria-label="Format">
+          <option value="auto">Auto</option>
+          <option value="plaintext">Plain Text</option>
+          <option value="json">JSON</option>
+          <option value="html">HTML</option>
+          <option value="xml">XML</option>
+          <option value="yaml">YAML</option>
+          <option value="css">CSS</option>
+          <option value="javascript">JavaScript</option>
+          <option value="typescript">TypeScript</option>
+          <option value="sql">SQL</option>
+          <option value="markdown">Markdown</option>
+        </select>
+      </div>
 
-<header>
-  <div class="logo">diff<span>view</span></div>
-  <div class="controls">
-    <select id="formatSelect">
-      <option value="auto">Auto Detect</option>
-      <option value="json">JSON</option>
-      <option value="html">HTML</option>
-      <option value="text">Plain Text</option>
-    </select>
-    <div class="separator"></div>
-    <button class="btn" id="btnFormatBoth" title="Auto-format both panels">⚡ Format Both</button>
-    <button class="btn" id="btnSortJson" title="Sort JSON keys alphabetically">⇅ Sort Keys</button>
-    <div class="separator"></div>
-    <button class="btn toggle" id="btnIgnoreWs" title="Ignore leading/trailing whitespace when comparing">⎵ Ignore Whitespace</button>
-    <div class="separator"></div>
-    <button class="btn primary" id="btnCompare">Compare</button>
-    <button class="btn danger" id="btnClear">Clear</button>
-  </div>
-</header>
+      <div class="toolbar-group">
+        <button id="formatLeft" type="button">Format Left</button>
+        <button id="formatRight" type="button">Format Right</button>
+        <button id="formatBoth" type="button">Format Both</button>
+      </div>
 
-<div class="input-row">
-  <div class="panel">
-    <div class="panel-header">
-      <span class="panel-label">Original</span>
-      <span class="file-name" id="fileName1"></span>
-      <button class="file-btn" onclick="document.getElementById('fileInput1').click()">📂 Open File</button>
-      <input type="file" id="fileInput1" accept="*/*">
+      <div class="toolbar-group">
+        <button id="compareBtn" class="primary-action" type="button">Compare</button>
+        <button id="editBtn" class="secondary-action" type="button" disabled>Edit</button>
+        <button id="prevBtn" type="button" disabled>Previous Diff</button>
+        <button id="nextBtn" type="button" disabled>Next Diff</button>
+      </div>
+
+      <div class="toolbar-group">
+        <label><input id="ignoreWhitespace" type="checkbox" /> Ignore whitespace</label>
+        <label><input id="ignoreCase" type="checkbox" /> Ignore case</label>
+        <label><input id="wrapLines" type="checkbox" /> Wrap long lines</label>
+      </div>
+
+      <div id="status" class="status" role="status" aria-live="polite"></div>
     </div>
-    <textarea id="text1" placeholder="Paste original content here, or open a file…" spellcheck="false"></textarea>
+
+    <main class="main">
+      <section id="editorGrid" class="editor-grid" aria-label="Input editors">
+        <div class="panel">
+          <div class="panel-header"><strong>Original</strong><button id="clearLeft" class="danger-action" type="button">Clear</button></div>
+          <div id="leftEditor" class="editor-host"></div>
+          <textarea id="leftFallback" class="textarea-fallback" spellcheck="false" aria-label="Original input"></textarea>
+        </div>
+        <div class="panel">
+          <div class="panel-header"><strong>Modified</strong><button id="clearRight" class="danger-action" type="button">Clear</button></div>
+          <div id="rightEditor" class="editor-host"></div>
+          <textarea id="rightFallback" class="textarea-fallback" spellcheck="false" aria-label="Modified input"></textarea>
+        </div>
+      </section>
+
+      <section id="diffGrid" class="diff-grid hidden" aria-label="Diff result">
+        <div class="panel">
+          <div class="panel-header"><strong>Original</strong><span id="leftDiffInfo"></span></div>
+          <div id="leftDiff" class="diff-pane" tabindex="0" aria-label="Original diff"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-header"><strong>Modified</strong><span id="rightDiffInfo"></span></div>
+          <div id="rightDiff" class="diff-pane" tabindex="0" aria-label="Modified diff"></div>
+        </div>
+      </section>
+    </main>
   </div>
-  <div class="panel">
-    <div class="panel-header">
-      <span class="panel-label">Modified</span>
-      <span class="file-name" id="fileName2"></span>
-      <button class="file-btn" onclick="document.getElementById('fileInput2').click()">📂 Open File</button>
-      <input type="file" id="fileInput2" accept="*/*">
-    </div>
-    <textarea id="text2" placeholder="Paste modified content here, or open a file…" spellcheck="false"></textarea>
-  </div>
-</div>
 
-<div id="diffStats" style="display:none">
-  <!-- stats bar populated by JS -->
-</div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.53.0/min/vs/loader.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/diff@5.2.0/dist/diff.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prettier@2.8.8/standalone.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prettier@2.8.8/parser-babel.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prettier@2.8.8/parser-html.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prettier@2.8.8/parser-postcss.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prettier@2.8.8/parser-markdown.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prettier@2.8.8/parser-yaml.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
 
-<div class="diff-section" id="diffOutput">
-  <div class="diff-empty">
-    <div class="icon">⇄</div>
-    <div>Paste content and click <strong>Compare</strong></div>
-  </div>
-</div>
+  <script>
+    (function () {
+      'use strict';
 
-<input type="file" id="fileInput1" accept="*/*" style="display:none">
-<input type="file" id="fileInput2" accept="*/*" style="display:none">
+      const store = {
+        left: 'plain-diff.leftContent',
+        right: 'plain-diff.rightContent',
+        format: 'plain-diff.format',
+        ignoreWhitespace: 'plain-diff.ignoreWhitespace',
+        ignoreCase: 'plain-diff.ignoreCase',
+        wrap: 'plain-diff.wrapLines'
+      };
 
-<script>
-// ─── Unicode normalisation ────────────────────────────────────────────────────
-// Collapses visually identical characters that differ at the byte level.
-// This is what causes ="0" to not match ="0" (curly vs straight quotes, etc.)
+      const els = {
+        formatSelect: document.getElementById('formatSelect'),
+        formatLeft: document.getElementById('formatLeft'),
+        formatRight: document.getElementById('formatRight'),
+        formatBoth: document.getElementById('formatBoth'),
+        compareBtn: document.getElementById('compareBtn'),
+        editBtn: document.getElementById('editBtn'),
+        prevBtn: document.getElementById('prevBtn'),
+        nextBtn: document.getElementById('nextBtn'),
+        ignoreWhitespace: document.getElementById('ignoreWhitespace'),
+        ignoreCase: document.getElementById('ignoreCase'),
+        wrapLines: document.getElementById('wrapLines'),
+        status: document.getElementById('status'),
+        editorGrid: document.getElementById('editorGrid'),
+        diffGrid: document.getElementById('diffGrid'),
+        leftEditor: document.getElementById('leftEditor'),
+        rightEditor: document.getElementById('rightEditor'),
+        leftFallback: document.getElementById('leftFallback'),
+        rightFallback: document.getElementById('rightFallback'),
+        leftDiff: document.getElementById('leftDiff'),
+        rightDiff: document.getElementById('rightDiff'),
+        leftDiffInfo: document.getElementById('leftDiffInfo'),
+        rightDiffInfo: document.getElementById('rightDiffInfo'),
+        clearLeft: document.getElementById('clearLeft'),
+        clearRight: document.getElementById('clearRight')
+      };
 
-function normaliseUnicode(s) {
-  return s
-    // Curly / smart quotes → straight
-    .replace(/[\u2018\u2019\u201A\u201B\u2032\u2035]/g, "'")
-    .replace(/[\u201C\u201D\u201E\u201F\u2033\u2036]/g, '"')
-    // Non-breaking & zero-width spaces → regular space
-    .replace(/[\u00A0\u200B\u200C\u200D\uFEFF]/g, ' ')
-    // En/em dash → hyphen
-    .replace(/[\u2013\u2014]/g, '-')
-    // Normalise CR+LF and bare CR to LF
-    .replace(/\r\n/g, '\n').replace(/\r/g, '\n')
-    // Unicode NFC normalisation (handles combining characters)
-    .normalize('NFC');
-}
+      let monacoRef = null;
+      let leftEditor = null;
+      let rightEditor = null;
+      let usingFallback = false;
+      let mode = 'edit';
+      let diffIndexes = [];
+      let currentDiff = -1;
+      let syncingScroll = false;
 
-// ─── Format detection ─────────────────────────────────────────────────────────
+      restoreState();
+      initMonaco();
+      wireEvents();
+      applyWrapState();
 
-function detectFormat(text) {
-  const t = text.trim();
-  if (!t) return 'text';
-  if (t.startsWith('{') || t.startsWith('[')) {
-    try { JSON.parse(t); return 'json'; } catch {}
-  }
-  if (t.startsWith('<')) return 'html';
-  return 'text';
-}
-
-function getFormat() {
-  const sel = document.getElementById('formatSelect').value;
-  if (sel !== 'auto') return sel;
-  const f1 = detectFormat(document.getElementById('text1').value);
-  const f2 = detectFormat(document.getElementById('text2').value);
-  return f1 === f2 ? f1 : (f1 !== 'text' ? f1 : f2);
-}
-
-// ─── Formatters ───────────────────────────────────────────────────────────────
-
-function formatJSON(text) {
-  return JSON.stringify(JSON.parse(text), null, 2);
-}
-
-function sortJSONKeys(obj) {
-  if (Array.isArray(obj)) return obj.map(sortJSONKeys);
-  if (obj !== null && typeof obj === 'object') {
-    return Object.keys(obj).sort().reduce((acc, k) => {
-      acc[k] = sortJSONKeys(obj[k]);
-      return acc;
-    }, {});
-  }
-  return obj;
-}
-
-function formatHTML(text) {
-  const tab = '  ';
-  const voidTags = new Set(['area','base','br','col','embed','hr','img','input',
-    'link','meta','param','source','track','wbr']);
-
-  // Step 1: collapse ALL existing whitespace between tokens so the input
-  // indentation never influences the output. Join everything, strip
-  // whitespace around tag boundaries, then split cleanly on tags.
-  const collapsed = text
-    .replace(/\s+/g, ' ')          // collapse all whitespace runs to single space
-    .replace(/>\s+</g, '><')       // remove spaces between tags
-    .replace(/>\s+/g, '>')         // remove space after closing >
-    .replace(/\s+</g, '<')         // remove space before opening <
-    .trim();
-
-  // Step 2: split into [text?, tag, text?, tag ...] tokens
-  const parts = collapsed.split(/(<[^>]*>)/);
-
-  const result = [];
-  let indent = 0;
-
-  for (const raw of parts) {
-    const part = raw.trim();
-    if (!part) continue;
-
-    if (!part.startsWith('<')) {
-      result.push(tab.repeat(indent) + part);
-      continue;
-    }
-
-    const isClose     = part.startsWith('</');
-    const isSelfClose = part.endsWith('/>');
-    const tagName     = (part.match(/^<\/?([a-zA-Z][a-zA-Z0-9-]*)/) || [])[1] || '';
-    const isVoid      = voidTags.has(tagName.toLowerCase());
-
-    if (isClose) {
-      indent = Math.max(0, indent - 1);
-      result.push(tab.repeat(indent) + part);
-    } else if (isSelfClose || isVoid) {
-      result.push(tab.repeat(indent) + part);
-    } else {
-      result.push(tab.repeat(indent) + part);
-      indent++;
-    }
-  }
-
-  return result.join('\n');
-}
-
-function autoFormat(text, fmt) {
-  const t = text.trim();
-  if (!t) return text;
-  try {
-    if (fmt === 'json') return formatJSON(t);
-    if (fmt === 'html') return formatHTML(t);
-  } catch(e) {}
-  return text;
-}
-
-// ─── LCS (Patience diff) ──────────────────────────────────────────────────────
-
-function computeLCS(a, b) {
-  const bIndex = new Map();
-  b.forEach((line, i) => {
-    if (!bIndex.has(line)) bIndex.set(line, []);
-    bIndex.get(line).push(i);
-  });
-
-  const stacks = [];
-  const stackTops = [];
-
-  for (let ai = 0; ai < a.length; ai++) {
-    const matches = (bIndex.get(a[ai]) || []).slice().reverse();
-    for (const bi of matches) {
-      let lo = 0, hi = stackTops.length;
-      while (lo < hi) {
-        const mid = (lo + hi) >> 1;
-        if (stackTops[mid] < bi) lo = mid + 1; else hi = mid;
+      function restoreState() {
+        els.formatSelect.value = localStorage.getItem(store.format) || 'auto';
+        els.ignoreWhitespace.checked = localStorage.getItem(store.ignoreWhitespace) === 'true';
+        els.ignoreCase.checked = localStorage.getItem(store.ignoreCase) === 'true';
+        els.wrapLines.checked = localStorage.getItem(store.wrap) === 'true';
+        els.leftFallback.value = localStorage.getItem(store.left) || '';
+        els.rightFallback.value = localStorage.getItem(store.right) || '';
       }
-      const prev = lo > 0 ? { si: lo - 1, pos: stacks[lo - 1].length - 1 } : null;
-      if (!stacks[lo]) stacks[lo] = [];
-      stacks[lo].push([ai, bi, prev]);
-      stackTops[lo] = bi;
-      break;
-    }
-  }
 
-  if (stacks.length === 0) return [];
-  const result = [];
-  let cur = { si: stacks.length - 1, pos: stacks[stacks.length - 1].length - 1 };
-  while (cur) {
-    const entry = stacks[cur.si][cur.pos];
-    result.push([entry[0], entry[1]]);
-    cur = entry[2] ? { si: entry[2].si, pos: entry[2].pos } : null;
-  }
-  return result.reverse();
-}
+      function initMonaco() {
+        if (!window.require) {
+          enableFallback('Monaco could not be loaded. Textarea fallback is active.');
+          return;
+        }
 
-// ─── Line diff ────────────────────────────────────────────────────────────────
+        window.require.config({ paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.53.0/min/vs' } });
+        window.require(['vs/editor/editor.main'], function (monaco) {
+          monacoRef = monaco;
+          defineTheme(monaco);
+          const common = {
+            theme: 'plain-diff-dark',
+            automaticLayout: true,
+            minimap: { enabled: false },
+            scrollBeyondLastLine: false,
+            wordWrap: els.wrapLines.checked ? 'on' : 'off',
+            fontSize: 13,
+            lineHeight: 20,
+            tabSize: 2,
+            insertSpaces: true,
+            renderWhitespace: 'selection',
+            padding: { top: 12, bottom: 12 }
+          };
+          leftEditor = monaco.editor.create(els.leftEditor, Object.assign({}, common, {
+            value: els.leftFallback.value,
+            language: languageFor(detectFormat(els.leftFallback.value))
+          }));
+          rightEditor = monaco.editor.create(els.rightEditor, Object.assign({}, common, {
+            value: els.rightFallback.value,
+            language: languageFor(detectFormat(els.rightFallback.value))
+          }));
 
-function prepareText(raw) {
-  // Always normalise unicode first, then split lines
-  const text = normaliseUnicode(raw);
-  const ignoreWs = document.getElementById('btnIgnoreWs').classList.contains('active');
-  if (!ignoreWs) return text === '' ? [] : text.split('\n');
-  // Ignore whitespace: trim each line. Empty-after-trim lines are kept so
-  // line numbers stay meaningful, but they compare equal to other empty lines.
-  return text === '' ? [] : text.split('\n').map(l => l.trim());
-}
-
-function diffLines(a, b) {
-  const aLines = prepareText(a);
-  const bLines = prepareText(b);
-  const lcs = computeLCS(aLines, bLines);
-
-  const ops = [];
-  let ai = 0, bi = 0;
-  for (const [la, lb] of lcs) {
-    while (ai < la) { ops.push({ type: 'del', left: aLines[ai] }); ai++; }
-    while (bi < lb) { ops.push({ type: 'ins', right: bLines[bi] }); bi++; }
-    ops.push({ type: 'eq', left: aLines[ai], right: bLines[bi] });
-    ai++; bi++;
-  }
-  while (ai < aLines.length) { ops.push({ type: 'del', left: aLines[ai] }); ai++; }
-  while (bi < bLines.length) { ops.push({ type: 'ins', right: bLines[bi] }); bi++; }
-  return ops;
-}
-
-// ─── Inline token diff ────────────────────────────────────────────────────────
-
-function esc(s) {
-  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
-
-function tokenize(s) {
-  return s.match(/\S+|\s+/g) || (s ? [s] : []);
-}
-
-function tokenDiff(left, right) {
-  const tokL = tokenize(left);
-  const tokR = tokenize(right);
-  const lcs  = computeLCS(tokL, tokR);
-
-  let li = 0, ri = 0, lOut = '', rOut = '';
-  for (const [la, lb] of lcs) {
-    while (li < la) { lOut += `<span class="token-del">${esc(tokL[li++])}</span>`; }
-    while (ri < lb) { rOut += `<span class="token-ins">${esc(tokR[ri++])}</span>`; }
-    lOut += esc(tokL[li++]);
-    rOut += esc(tokR[ri++]);
-  }
-  while (li < tokL.length) { lOut += `<span class="token-del">${esc(tokL[li++])}</span>`; }
-  while (ri < tokR.length) { rOut += `<span class="token-ins">${esc(tokR[ri++])}</span>`; }
-  return { left: lOut, right: rOut };
-}
-
-// ─── Render ───────────────────────────────────────────────────────────────────
-
-function renderDiff(ops) {
-  const rows = [];
-  let i = 0;
-  while (i < ops.length) {
-    if (ops[i].type === 'eq') {
-      rows.push({ type: 'eq', left: ops[i].left, right: ops[i].right });
-      i++;
-    } else {
-      const dels = [], inss = [];
-      while (i < ops.length && ops[i].type !== 'eq') {
-        if (ops[i].type === 'del') dels.push(ops[i].left);
-        else inss.push(ops[i].right);
-        i++;
+          leftEditor.onDidChangeModelContent(function () {
+            localStorage.setItem(store.left, leftEditor.getValue());
+            updateLanguage(leftEditor);
+          });
+          rightEditor.onDidChangeModelContent(function () {
+            localStorage.setItem(store.right, rightEditor.getValue());
+            updateLanguage(rightEditor);
+          });
+        }, function () {
+          enableFallback('Monaco could not be loaded. Textarea fallback is active.');
+        });
       }
-      const maxLen = Math.max(dels.length, inss.length);
-      for (let j = 0; j < maxLen; j++) {
-        const d = dels[j], ins = inss[j];
-        if (d !== undefined && ins !== undefined) {
-          const { left, right } = tokenDiff(d, ins);
-          rows.push({ type: 'mod', left, right });
-        } else if (d !== undefined) {
-          rows.push({ type: 'del', left: esc(d) });
-        } else {
-          rows.push({ type: 'ins', right: esc(ins) });
+
+      function defineTheme(monaco) {
+        monaco.editor.defineTheme('plain-diff-dark', {
+          base: 'vs-dark',
+          inherit: true,
+          rules: [
+            { token: '', foreground: 'F3F4F6', background: '0B1020' },
+            { token: 'comment', foreground: '9CA3AF' },
+            { token: 'string', foreground: '3AE5E7' },
+            { token: 'number', foreground: 'FFBD60' },
+            { token: 'keyword', foreground: 'FF6F61' }
+          ],
+          colors: {
+            'editor.background': '#0B1020',
+            'editor.foreground': '#F3F4F6',
+            'editorLineNumber.foreground': '#6B7280',
+            'editorLineNumber.activeForeground': '#3AE5E7',
+            'editorCursor.foreground': '#3AE5E7',
+            'editor.selectionBackground': '#3AE5E733',
+            'editor.inactiveSelectionBackground': '#3AE5E722',
+            'editor.lineHighlightBackground': '#11182D',
+            'editorGutter.background': '#0B1020'
+          }
+        });
+      }
+
+      function enableFallback(message) {
+        usingFallback = true;
+        els.leftEditor.style.display = 'none';
+        els.rightEditor.style.display = 'none';
+        els.leftFallback.style.display = 'block';
+        els.rightFallback.style.display = 'block';
+        setStatus(message, 'warn');
+      }
+
+      function wireEvents() {
+        els.formatSelect.addEventListener('change', function () {
+          localStorage.setItem(store.format, els.formatSelect.value);
+          if (monacoRef && leftEditor && rightEditor) {
+            updateLanguage(leftEditor);
+            updateLanguage(rightEditor);
+          }
+        });
+
+        els.ignoreWhitespace.addEventListener('change', persistOptions);
+        els.ignoreCase.addEventListener('change', persistOptions);
+        els.wrapLines.addEventListener('change', function () {
+          persistOptions();
+          applyWrapState();
+        });
+
+        els.formatLeft.addEventListener('click', function () { formatSide('left'); });
+        els.formatRight.addEventListener('click', function () { formatSide('right'); });
+        els.formatBoth.addEventListener('click', function () { formatSide('both'); });
+        els.compareBtn.addEventListener('click', compare);
+        els.editBtn.addEventListener('click', showEditMode);
+        els.prevBtn.addEventListener('click', previousDiff);
+        els.nextBtn.addEventListener('click', nextDiff);
+        els.clearLeft.addEventListener('click', clearLeft);
+        els.clearRight.addEventListener('click', clearRight);
+
+        els.leftFallback.addEventListener('input', function () { localStorage.setItem(store.left, els.leftFallback.value); });
+        els.rightFallback.addEventListener('input', function () { localStorage.setItem(store.right, els.rightFallback.value); });
+
+        els.leftDiff.addEventListener('scroll', function () { syncScroll(els.leftDiff, els.rightDiff); });
+        els.rightDiff.addEventListener('scroll', function () { syncScroll(els.rightDiff, els.leftDiff); });
+
+        window.addEventListener('keydown', function (event) {
+          const insideEditor = isInsideEditor(event.target);
+          const key = event.key.toLowerCase();
+          if (event.ctrlKey && !event.shiftKey && !event.altKey && key === 'f') {
+            event.preventDefault();
+            formatSide('both');
+            return;
+          }
+          if (event.ctrlKey && !event.shiftKey && !event.altKey && event.key === 'Enter') {
+            event.preventDefault();
+            compare();
+            return;
+          }
+          if (!insideEditor && mode === 'diff' && event.key === 'ArrowUp') {
+            event.preventDefault();
+            previousDiff();
+          }
+          if (!insideEditor && mode === 'diff' && event.key === 'ArrowDown') {
+            event.preventDefault();
+            nextDiff();
+          }
+        });
+
+        window.addEventListener('resize', function () {
+          if (leftEditor) leftEditor.layout();
+          if (rightEditor) rightEditor.layout();
+        });
+      }
+
+      function persistOptions() {
+        localStorage.setItem(store.ignoreWhitespace, String(els.ignoreWhitespace.checked));
+        localStorage.setItem(store.ignoreCase, String(els.ignoreCase.checked));
+        localStorage.setItem(store.wrap, String(els.wrapLines.checked));
+      }
+
+      function isInsideEditor(target) {
+        return Boolean(target && target.closest && target.closest('.monaco-editor, textarea'));
+      }
+
+      function getLeft() { return leftEditor ? leftEditor.getValue() : els.leftFallback.value; }
+      function getRight() { return rightEditor ? rightEditor.getValue() : els.rightFallback.value; }
+      function setLeft(value) {
+        if (leftEditor) leftEditor.setValue(value); else els.leftFallback.value = value;
+        localStorage.setItem(store.left, value);
+      }
+      function setRight(value) {
+        if (rightEditor) rightEditor.setValue(value); else els.rightFallback.value = value;
+        localStorage.setItem(store.right, value);
+      }
+
+      function clearLeft() {
+        setLeft('');
+        localStorage.removeItem(store.left);
+        setStatus('Original input cleared.', 'ok');
+      }
+
+      function clearRight() {
+        setRight('');
+        localStorage.removeItem(store.right);
+        setStatus('Modified input cleared.', 'ok');
+      }
+
+      function applyWrapState() {
+        const wrap = els.wrapLines.checked;
+        els.leftDiff.classList.toggle('wrap', wrap);
+        els.rightDiff.classList.toggle('wrap', wrap);
+        if (leftEditor) leftEditor.updateOptions({ wordWrap: wrap ? 'on' : 'off' });
+        if (rightEditor) rightEditor.updateOptions({ wordWrap: wrap ? 'on' : 'off' });
+      }
+
+      function setStatus(message, type) {
+        els.status.textContent = message || '';
+        els.status.className = 'status' + (type ? ' ' + type : '');
+      }
+
+      function formatSide(side) {
+        const targets = side === 'both' ? ['left', 'right'] : [side];
+        const original = { left: getLeft(), right: getRight() };
+        try {
+          targets.forEach(function (target) {
+            const value = target === 'left' ? original.left : original.right;
+            const format = resolveFormat(value);
+            const formatted = formatText(value, format);
+            if (target === 'left') setLeft(formatted); else setRight(formatted);
+          });
+          setStatus(side === 'both' ? 'Formatted both inputs.' : 'Formatted ' + (side === 'left' ? 'Original.' : 'Modified.'), 'ok');
+        } catch (error) {
+          if (side === 'both') {
+            setLeft(original.left);
+            setRight(original.right);
+          }
+          setStatus(error.message, 'diff');
         }
       }
-    }
-  }
 
-  let adds = 0, dels2 = 0, sames = 0;
-  for (const r of rows) {
-    if      (r.type === 'ins') adds++;
-    else if (r.type === 'del') dels2++;
-    else if (r.type === 'mod') { adds++; dels2++; }
-    else sames++;
-  }
+      function resolveFormat(value) {
+        const selected = els.formatSelect.value;
+        return selected === 'auto' ? detectFormat(value) : selected;
+      }
 
-  let html = `<table class="diff-table"><colgroup>
-    <col class="col-num"><col class="col-code"><col class="divider-col"><col class="col-num"><col class="col-code">
-  </colgroup><tbody>`;
+      function detectFormat(value) {
+        const text = (value || '').trim();
+        if (!text) return 'plaintext';
+        if ((text.startsWith('{') && text.endsWith('}')) || (text.startsWith('[') && text.endsWith(']'))) {
+          try { JSON.parse(text); return 'json'; } catch (_) {}
+        }
+        if (/^<!doctype\s+html/i.test(text) || /<html[\s>]/i.test(text) || /<body[\s>]/i.test(text)) return 'html';
+        if (/^<\?xml/i.test(text) || (/^<[^>]+>/.test(text) && /<\/[^>]+>\s*$/.test(text))) return 'xml';
+        if (/^\s*[{.#]?[\w-]+\s*\{[\s\S]*\}\s*$/.test(text) && /[:;]/.test(text)) return 'css';
+        if (/\b(select|insert|update|delete|create|alter|drop|from|where|join)\b/i.test(text) && /(;|\bfrom\b|\bwhere\b)/i.test(text)) return 'sql';
+        if (/\b(function|const|let|var|import|export|class|interface|type)\b/.test(text)) return /\b(interface|type\s+\w+\s*=|implements|readonly)\b/.test(text) ? 'typescript' : 'javascript';
+        if (/^\s*---\s*$/.test(text.split('\n')[0]) || /^\s*[\w-]+:\s+/.test(text)) return 'yaml';
+        if (/^\s{0,3}#{1,6}\s+/.test(text) || /\[[^\]]+\]\([^\)]+\)/.test(text)) return 'markdown';
+        return 'plaintext';
+      }
 
-  let ll = 1, rl = 1;
-  for (const row of rows) {
-    if (row.type === 'eq') {
-      html += `<tr><td class="line-num">${ll++}</td><td>${esc(row.left)}</td><td class="divider-col"></td><td class="line-num">${rl++}</td><td>${esc(row.right)}</td></tr>`;
-    } else if (row.type === 'del') {
-      html += `<tr class="line-del"><td class="line-num">${ll++}</td><td>${row.left}</td><td class="divider-col"></td><td class="line-num"></td><td></td></tr>`;
-    } else if (row.type === 'ins') {
-      html += `<tr class="line-ins"><td class="line-num"></td><td></td><td class="divider-col"></td><td class="line-num">${rl++}</td><td>${row.right}</td></tr>`;
-    } else if (row.type === 'mod') {
-      html += `<tr><td class="line-num line-del">${ll++}</td><td class="line-del">${row.left}</td><td class="divider-col"></td><td class="line-num line-ins">${rl++}</td><td class="line-ins">${row.right}</td></tr>`;
-    }
-  }
+      function languageFor(format) {
+        const map = {
+          plaintext: 'plaintext', json: 'json', html: 'html', xml: 'xml', yaml: 'yaml', css: 'css',
+          javascript: 'javascript', typescript: 'typescript', sql: 'sql', markdown: 'markdown'
+        };
+        return map[format] || 'plaintext';
+      }
 
-  html += '</tbody></table>';
-  return { html, adds, dels: dels2, sames };
-}
+      function updateLanguage(editor) {
+        if (!monacoRef || !editor) return;
+        const format = resolveFormat(editor.getValue());
+        const model = editor.getModel();
+        if (model) monacoRef.editor.setModelLanguage(model, languageFor(format));
+      }
 
-// ─── Compare ─────────────────────────────────────────────────────────────────
+      function formatText(value, format) {
+        if (!value.trim() || format === 'plaintext') return value;
+        try {
+          if (format === 'json') return JSON.stringify(JSON.parse(value), null, 2) + '\n';
+          if (format === 'xml') return formatXml(value);
+          if (format === 'sql') return formatSql(value);
+          if (format === 'yaml') return formatYaml(value);
+          if (window.prettier) {
+            const parser = prettierParserFor(format);
+            if (parser) return window.prettier.format(value, { parser, plugins: prettierPlugins(), printWidth: 100, tabWidth: 2, singleQuote: false });
+          }
+          if (format === 'html') return formatMarkup(value);
+          if (format === 'css') return formatCss(value);
+          return value;
+        } catch (error) {
+          const label = format.toUpperCase();
+          throw new Error('Unable to format as ' + label + ': ' + (error && error.message ? error.message : String(error)));
+        }
+      }
 
-function compare() {
-  const t1 = document.getElementById('text1').value;
-  const t2 = document.getElementById('text2').value;
-  const output   = document.getElementById('diffOutput');
-  const statsBar = document.getElementById('diffStats');
+      function prettierPlugins() {
+        return [window.prettierPlugins && window.prettierPlugins.babel, window.prettierPlugins && window.prettierPlugins.html, window.prettierPlugins && window.prettierPlugins.postcss, window.prettierPlugins && window.prettierPlugins.markdown, window.prettierPlugins && window.prettierPlugins.yaml].filter(Boolean);
+      }
 
-  if (!t1 && !t2) {
-    output.innerHTML = `<div class="diff-empty"><div class="icon">⇄</div><div>Paste content and click <strong>Compare</strong></div></div>`;
-    statsBar.style.display = 'none';
-    return;
-  }
+      function prettierParserFor(format) {
+        return ({ html: 'html', css: 'css', javascript: 'babel', typescript: 'typescript', markdown: 'markdown', yaml: 'yaml' })[format] || null;
+      }
 
-  const ops = diffLines(t1, t2);
-  const { html, adds, dels, sames } = renderDiff(ops);
+      function formatYaml(value) {
+        if (window.prettier && window.prettierPlugins && window.prettierPlugins.yaml) {
+          return window.prettier.format(value, { parser: 'yaml', plugins: prettierPlugins(), tabWidth: 2 });
+        }
+        if (window.jsyaml) return window.jsyaml.dump(window.jsyaml.load(value), { indent: 2, lineWidth: 100 });
+        return value;
+      }
 
-  statsBar.style.display = 'block';
-  if (adds === 0 && dels === 0) {
-    statsBar.innerHTML = `<div class="diff-identical">✓ Files are identical</div>`;
-  } else {
-    statsBar.innerHTML = `<div class="diff-stats">
-      <span class="stat-add">+${adds} addition${adds !== 1 ? 's' : ''}</span>
-      <span class="stat-del">−${dels} deletion${dels !== 1 ? 's' : ''}</span>
-      <span class="stat-same">${sames} unchanged</span>
-    </div>`;
-  }
-  output.innerHTML = html;
-}
+      function formatSql(value) {
+        const keywords = ['SELECT','FROM','WHERE','GROUP BY','ORDER BY','HAVING','INNER JOIN','LEFT JOIN','RIGHT JOIN','FULL JOIN','JOIN','VALUES','SET','AND','OR'];
+        let out = value.replace(/\s+/g, ' ').trim();
+        keywords.forEach(function (keyword) {
+          const rx = new RegExp('\\s+(' + keyword.replace(' ', '\\s+') + ')\\s+', 'ig');
+          out = out.replace(rx, '\n$1 ');
+        });
+        out = out.replace(/,\s*/g, ',\n  ');
+        return out.trim() + '\n';
+      }
 
-// ─── Event handlers ───────────────────────────────────────────────────────────
+      function formatCss(value) {
+        return value.replace(/\s*{\s*/g, ' {\n  ').replace(/;\s*/g, ';\n  ').replace(/\s*}\s*/g, '\n}\n').replace(/\n\s*\n/g, '\n').trim() + '\n';
+      }
 
-document.getElementById('btnCompare').addEventListener('click', compare);
+      function formatXml(value) { return formatMarkup(value); }
 
-document.getElementById('btnIgnoreWs').addEventListener('click', () => {
-  document.getElementById('btnIgnoreWs').classList.toggle('active');
-  compare();
-});
+      function formatMarkup(value) {
+        const tokens = value.replace(/>\s*</g, '><').replace(/</g, '\n<').replace(/>/g, '>\n').split('\n').map(function (x) { return x.trim(); }).filter(Boolean);
+        let indent = 0;
+        const lines = tokens.map(function (token) {
+          if (/^<\//.test(token)) indent = Math.max(0, indent - 1);
+          const line = '  '.repeat(indent) + token;
+          if (/^<[^!?/][^>]*[^/]?>$/.test(token) && !/^<(area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr)\b/i.test(token)) indent += 1;
+          return line;
+        });
+        return lines.join('\n') + '\n';
+      }
 
-document.getElementById('btnClear').addEventListener('click', () => {
-  document.getElementById('text1').value = '';
-  document.getElementById('text2').value = '';
-  document.getElementById('fileName1').textContent = '';
-  document.getElementById('fileName2').textContent = '';
-  document.getElementById('diffOutput').innerHTML = `<div class="diff-empty"><div class="icon">⇄</div><div>Paste content and click <strong>Compare</strong></div></div>`;
-  document.getElementById('diffStats').style.display = 'none';
-});
+      function compare() {
+        const left = getLeft();
+        const right = getRight();
+        const result = buildDiffRows(left, right);
+        renderDiff(result.rows);
+        showDiffMode();
+        diffIndexes = result.rows.map(function (row, index) { return row.type === 'equal' ? -1 : index; }).filter(function (index) { return index >= 0; });
+        currentDiff = diffIndexes.length ? 0 : -1;
+        updateDiffControls();
+        updateStatus(result.diffCount);
+        if (currentDiff >= 0) scrollToDiff(currentDiff);
+      }
 
-document.getElementById('btnFormatBoth').addEventListener('click', () => {
-  const fmt = getFormat();
-  const ta1 = document.getElementById('text1');
-  const ta2 = document.getElementById('text2');
-  ta1.value = autoFormat(ta1.value, fmt);
-  ta2.value = autoFormat(ta2.value, fmt);
-  compare();
-});
+      function updateStatus(diffCount) {
+        const flags = [];
+        if (els.ignoreWhitespace.checked) flags.push('whitespace');
+        if (els.ignoreCase.checked) flags.push('case');
+        const suffix = flags.length ? ' with ' + flags.join(' and ') + ' ignored' : '';
+        if (diffCount === 0) setStatus('No differences found' + suffix + '. Both sides are identical.', 'ok');
+        else setStatus(diffCount + ' difference' + (diffCount === 1 ? '' : 's') + ' found' + suffix + '.', 'diff');
+      }
 
-document.getElementById('btnSortJson').addEventListener('click', () => {
-  const ta1 = document.getElementById('text1');
-  const ta2 = document.getElementById('text2');
-  [ta1, ta2].forEach(ta => {
-    try {
-      ta.value = JSON.stringify(sortJSONKeys(JSON.parse(ta.value.trim())), null, 2);
-    } catch {}
-  });
-  compare();
-});
+      function showDiffMode() {
+        mode = 'diff';
+        els.editorGrid.classList.add('hidden');
+        els.diffGrid.classList.remove('hidden');
+        els.editBtn.disabled = false;
+        els.compareBtn.disabled = false;
+      }
 
-function loadFile(inputId, textareaId, nameId) {
-  document.getElementById(inputId).addEventListener('change', e => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = ev => {
-      document.getElementById(textareaId).value = ev.target.result;
-      document.getElementById(nameId).textContent = file.name;
-    };
-    reader.readAsText(file);
-    e.target.value = '';
-  });
-}
+      function showEditMode() {
+        mode = 'edit';
+        els.diffGrid.classList.add('hidden');
+        els.editorGrid.classList.remove('hidden');
+        els.editBtn.disabled = true;
+        els.prevBtn.disabled = true;
+        els.nextBtn.disabled = true;
+        setStatus('Edit mode.', '');
+        setTimeout(function () {
+          if (leftEditor) leftEditor.layout();
+          if (rightEditor) rightEditor.layout();
+        }, 0);
+      }
 
-loadFile('fileInput1', 'text1', 'fileName1');
-loadFile('fileInput2', 'text2', 'fileName2');
+      function normalizeLine(line) {
+        let value = line;
+        if (els.ignoreWhitespace.checked) value = value.replace(/\s+/g, ' ').trim();
+        if (els.ignoreCase.checked) value = value.toLowerCase();
+        return value;
+      }
 
-document.addEventListener('keydown', e => {
-  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') compare();
-});
+      function splitLines(value) {
+        return value.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+      }
 
-let liveTimer;
-['text1','text2'].forEach(id => {
-  document.getElementById(id).addEventListener('input', () => {
-    clearTimeout(liveTimer);
-    liveTimer = setTimeout(compare, 600);
-  });
-});
-</script>
+      function buildDiffRows(leftText, rightText) {
+        const leftLines = splitLines(leftText);
+        const rightLines = splitLines(rightText);
+        const leftNorm = leftLines.map(normalizeLine);
+        const rightNorm = rightLines.map(normalizeLine);
+        const chunks = window.Diff && window.Diff.diffArrays ? window.Diff.diffArrays(leftNorm, rightNorm) : fallbackChunks(leftNorm, rightNorm);
+        const rows = [];
+        let li = 0;
+        let ri = 0;
+        let pendingRemoved = [];
+        let diffCount = 0;
+
+        function flushRemoved() {
+          pendingRemoved.forEach(function (item) {
+            rows.push({ type: 'removed', leftLineNo: item.lineNo, rightLineNo: '', left: item.text, right: '' });
+            diffCount += 1;
+          });
+          pendingRemoved = [];
+        }
+
+        chunks.forEach(function (chunk) {
+          if (!chunk.added && !chunk.removed) {
+            flushRemoved();
+            chunk.value.forEach(function () {
+              rows.push({ type: 'equal', leftLineNo: li + 1, rightLineNo: ri + 1, left: leftLines[li] || '', right: rightLines[ri] || '' });
+              li += 1; ri += 1;
+            });
+            return;
+          }
+
+          if (chunk.removed) {
+            chunk.value.forEach(function () {
+              pendingRemoved.push({ lineNo: li + 1, text: leftLines[li] || '' });
+              li += 1;
+            });
+            return;
+          }
+
+          if (chunk.added) {
+            const added = [];
+            chunk.value.forEach(function () {
+              added.push({ lineNo: ri + 1, text: rightLines[ri] || '' });
+              ri += 1;
+            });
+            const pairCount = Math.min(pendingRemoved.length, added.length);
+            for (let i = 0; i < pairCount; i += 1) {
+              rows.push({ type: 'changed', leftLineNo: pendingRemoved[i].lineNo, rightLineNo: added[i].lineNo, left: pendingRemoved[i].text, right: added[i].text });
+              diffCount += 1;
+            }
+            for (let i = pairCount; i < pendingRemoved.length; i += 1) {
+              rows.push({ type: 'removed', leftLineNo: pendingRemoved[i].lineNo, rightLineNo: '', left: pendingRemoved[i].text, right: '' });
+              diffCount += 1;
+            }
+            for (let i = pairCount; i < added.length; i += 1) {
+              rows.push({ type: 'added', leftLineNo: '', rightLineNo: added[i].lineNo, left: '', right: added[i].text });
+              diffCount += 1;
+            }
+            pendingRemoved = [];
+          }
+        });
+        flushRemoved();
+        return { rows: rows, diffCount: diffCount };
+      }
+
+      function fallbackChunks(leftNorm, rightNorm) {
+        const chunks = [];
+        const max = Math.max(leftNorm.length, rightNorm.length);
+        for (let i = 0; i < max; i += 1) {
+          if (leftNorm[i] === rightNorm[i]) chunks.push({ value: [leftNorm[i]] });
+          else {
+            if (i < leftNorm.length) chunks.push({ removed: true, value: [leftNorm[i]] });
+            if (i < rightNorm.length) chunks.push({ added: true, value: [rightNorm[i]] });
+          }
+        }
+        return chunks;
+      }
+
+      function renderDiff(rows) {
+        els.leftDiff.innerHTML = renderSide(rows, 'left');
+        els.rightDiff.innerHTML = renderSide(rows, 'right');
+        els.leftDiffInfo.textContent = rows.length + ' lines';
+        els.rightDiffInfo.textContent = rows.length + ' lines';
+        applyWrapState();
+      }
+
+      function renderSide(rows, side) {
+        return '<div class="diff-table">' + rows.map(function (row, index) {
+          const lineNo = side === 'left' ? row.leftLineNo : row.rightLineNo;
+          const content = side === 'left' ? row.left : row.right;
+          const cls = rowClass(row, side);
+          const rendered = renderContent(row, side);
+          return '<div class="diff-row ' + cls + '" data-row="' + index + '"><div class="line-number">' + escapeHtml(String(lineNo || '')) + '</div><div class="line-content">' + rendered + '</div></div>';
+        }).join('') + '</div>';
+      }
+
+      function rowClass(row, side) {
+        if (row.type === 'equal') return '';
+        if (row.type === 'added') return side === 'right' ? 'line-added' : 'line-blank';
+        if (row.type === 'removed') return side === 'left' ? 'line-removed' : 'line-blank';
+        if (row.type === 'changed') return 'line-changed';
+        return '';
+      }
+
+      function renderContent(row, side) {
+        if (row.type === 'added') return side === 'right' ? '<span class="mark-added">' + escapeHtml(row.right || ' ') + '</span>' : '&nbsp;';
+        if (row.type === 'removed') return side === 'left' ? '<span class="mark-removed">' + escapeHtml(row.left || ' ') + '</span>' : '&nbsp;';
+        if (row.type === 'changed') {
+          const parts = characterDiff(row.left || '', row.right || '');
+          return side === 'left' ? parts.left : parts.right;
+        }
+        return escapeHtml(row[side] || '');
+      }
+
+      function characterDiff(left, right) {
+        if (!window.Diff || !window.Diff.diffChars) {
+          return { left: '<span class="mark-changed">' + escapeHtml(left || ' ') + '</span>', right: '<span class="mark-changed">' + escapeHtml(right || ' ') + '</span>' };
+        }
+        const parts = window.Diff.diffChars(left, right);
+        let l = '';
+        let r = '';
+        parts.forEach(function (part) {
+          if (part.added) r += '<span class="mark-changed">' + escapeHtml(part.value || ' ') + '</span>';
+          else if (part.removed) l += '<span class="mark-changed">' + escapeHtml(part.value || ' ') + '</span>';
+          else {
+            l += escapeHtml(part.value);
+            r += escapeHtml(part.value);
+          }
+        });
+        return { left: l || '&nbsp;', right: r || '&nbsp;' };
+      }
+
+      function escapeHtml(value) {
+        return String(value).replace(/[&<>"']/g, function (ch) {
+          return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch];
+        });
+      }
+
+      function updateDiffControls() {
+        const hasDiffs = diffIndexes.length > 0;
+        els.prevBtn.disabled = !hasDiffs;
+        els.nextBtn.disabled = !hasDiffs;
+        if (hasDiffs) {
+          els.prevBtn.textContent = 'Previous Diff (' + (currentDiff + 1) + '/' + diffIndexes.length + ')';
+          els.nextBtn.textContent = 'Next Diff (' + (currentDiff + 1) + '/' + diffIndexes.length + ')';
+        } else {
+          els.prevBtn.textContent = 'Previous Diff';
+          els.nextBtn.textContent = 'Next Diff';
+        }
+      }
+
+      function previousDiff() {
+        if (!diffIndexes.length) return;
+        currentDiff = currentDiff <= 0 ? diffIndexes.length - 1 : currentDiff - 1;
+        scrollToDiff(currentDiff);
+      }
+
+      function nextDiff() {
+        if (!diffIndexes.length) return;
+        currentDiff = currentDiff >= diffIndexes.length - 1 ? 0 : currentDiff + 1;
+        scrollToDiff(currentDiff);
+      }
+
+      function scrollToDiff(position) {
+        const rowIndex = diffIndexes[position];
+        document.querySelectorAll('.diff-row.current').forEach(function (node) { node.classList.remove('current'); });
+        document.querySelectorAll('.diff-row[data-row="' + rowIndex + '"]').forEach(function (node) { node.classList.add('current'); });
+        const leftRow = els.leftDiff.querySelector('.diff-row[data-row="' + rowIndex + '"]');
+        if (leftRow) {
+          const target = Math.max(0, leftRow.offsetTop - els.leftDiff.clientHeight / 3);
+          els.leftDiff.scrollTop = target;
+          els.rightDiff.scrollTop = target;
+        }
+        updateDiffControls();
+      }
+
+      function syncScroll(source, target) {
+        if (syncingScroll) return;
+        syncingScroll = true;
+        target.scrollTop = source.scrollTop;
+        target.scrollLeft = source.scrollLeft;
+        syncingScroll = false;
+      }
+    })();
+  </script>
 </body>
 </html>
