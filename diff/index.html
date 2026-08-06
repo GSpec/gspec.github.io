@@ -92,7 +92,14 @@
     }
 
     select {
-      padding: 0.3rem 1.2rem 0.45rem 0.7rem;
+      padding: 0.3rem 2rem 0.45rem 0.7rem;
+      appearance: none;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      background-color: rgba(var(--panel-2), 0.95);
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23F3F4F6' d='M2 4l4 4 4-4z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: calc(100% - 12px) center;
     }
 
     button {
@@ -130,7 +137,7 @@
       color: var(--primary);
     }
 
-    .secondary-action { color: var(--text-muted); }
+    .secondary-action { color: var(--accent); }
 
     .danger-action {
       color: var(--secondary);
@@ -768,10 +775,23 @@
         const result = buildDiffRows(left, right);
         renderDiff(result.rows);
         showDiffMode();
-        diffIndexes = result.rows.map(function (row, index) { return row.type === 'equal' ? -1 : index; }).filter(function (index) { return index >= 0; });
+        diffIndexes = [];
+
+        let inDiffBlock = false;
+        result.rows.forEach(function (row, index) {
+          if (row.type === 'equal') {
+            inDiffBlock = false;
+            return;
+          }
+
+          if (!inDiffBlock) {
+            diffIndexes.push(index);
+            inDiffBlock = true;
+          }
+        });
         currentDiff = diffIndexes.length ? 0 : -1;
         updateDiffControls();
-        updateStatus(result.diffCount);
+        updateStatus(diffIndexes.length);
         if (currentDiff >= 0) scrollToDiff(currentDiff);
       }
 
