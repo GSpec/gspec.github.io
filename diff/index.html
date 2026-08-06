@@ -450,7 +450,7 @@
         }
 
         window.require.config({ paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.53.0/min/vs' } });
-        setStatus('Textarea editing is ready. Loading enhanced editor...', 'warn');
+        //setStatus('Textarea editing is ready. Loading enhanced editor...', 'warn');
         window.require(['vs/editor/editor.main'], function (monaco) {
           monacoRef = monaco;
           defineTheme(monaco);
