@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pension Forecast</title>
+<style>
+  :root{
+    --bg: #0c0e0f;
+    --panel: #15181a;
+    --panel-line: #24282b;
+    --text: #e9e6df;
+    --muted: #8b9094;
+    --accent: #c9a86a;
+    --accent-dim: #4a3f2a;
+    --growth: #7fae82;
+    --real: #6f93b0;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding: 40px 20px 80px;
+  }
+  header{
+    width:100%;
+    max-width: 980px;
+    margin-bottom: 28px;
+  }
+  h1{
+    font-family: Georgia, 'Times New Roman', serif;
+    font-weight: 500;
+    font-size: 28px;
+    letter-spacing: 0.2px;
+    margin: 0 0 4px;
+    color: var(--text);
+  }
+  header p{
+    margin:0;
+    color:var(--muted);
+    font-size: 13.5px;
+  }
+  .layout{
+    width:100%;
+    max-width: 980px;
+    display:grid;
+    grid-template-columns: 320px 1fr;
+    gap: 1px;
+    background: var(--panel-line);
+    border: 1px solid var(--panel-line);
+  }
+  @media (max-width: 760px){
+    .layout{ grid-template-columns: 1fr; }
+  }
+  .panel{
+    background: var(--panel);
+    padding: 24px;
+  }
+  .panel-label{
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1.4px;
+    color: var(--muted);
+    margin-bottom: 18px;
+  }
+  .field{
+    margin-bottom: 18px;
+  }
+  .field label{
+    display:block;
+    font-size: 13px;
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+  .field .hint{
+    display:block;
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+  .input-wrap{
+    position: relative;
+    display:flex;
+    align-items:center;
+  }
+  .input-wrap .prefix, .input-wrap .suffix{
+    position:absolute;
+    color: var(--muted);
+    font-size: 14px;
+    pointer-events:none;
+  }
+  .input-wrap .prefix{ left: 10px; }
+  .input-wrap .suffix{ right: 10px; }
+  input[type=number]{
+    width:100%;
+    background: #0f1112;
+    border: 1px solid var(--panel-line);
+    color: var(--text);
+    font-family: 'Consolas', 'SFMono-Regular', monospace;
+    font-size: 15px;
+    padding: 9px 10px;
+    border-radius: 3px;
+    transition: border-color .15s;
+  }
+  input[type=number].with-prefix{ padding-left: 22px; }
+  input[type=number].with-suffix{ padding-right: 26px; }
+  input[type=number]:focus{
+    outline:none;
+    border-color: var(--accent);
+  }
+  input[type=number]::-webkit-inner-spin-button{
+    opacity: 0.3;
+  }
+
+  .divider{
+    height:1px;
+    background: var(--panel-line);
+    margin: 22px 0;
+  }
+
+  .results{
+    display:flex;
+    flex-direction:column;
+    gap: 22px;
+  }
+  .headline-row{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: var(--panel-line);
+    border: 1px solid var(--panel-line);
+  }
+  .headline{
+    background: var(--panel);
+    padding: 18px 20px;
+  }
+  .headline .panel-label{ margin-bottom: 8px; }
+  .headline .value{
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 30px;
+    color: var(--accent);
+    line-height:1.1;
+  }
+  .headline .value.income{ color: var(--growth); }
+  .headline .sub{
+    margin-top:6px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .toggle-row{
+    display:flex;
+    align-items:center;
+    justify-content: space-between;
+    gap: 12px;
+    background:#0f1112;
+    border:1px solid var(--panel-line);
+    border-radius: 3px;
+    padding: 12px 14px;
+  }
+  .toggle-row .label{
+    font-size: 13px;
+  }
+  .toggle-row .label .hint{
+    display:block;
+    font-size: 11px;
+    color: var(--muted);
+    margin-top:2px;
+  }
+  .switch{
+    position: relative;
+    width: 44px;
+    height: 24px;
+    flex-shrink:0;
+  }
+  .switch input{ opacity:0; width:0; height:0; }
+  .switch .track{
+    position:absolute; inset:0;
+    background: var(--panel-line);
+    border-radius: 12px;
+    cursor:pointer;
+    transition: background .15s;
+  }
+  .switch .track::before{
+    content:"";
+    position:absolute;
+    height: 18px; width: 18px;
+    left:3px; top:3px;
+    background: var(--muted);
+    border-radius:50%;
+    transition: transform .15s, background .15s;
+  }
+  .switch input:checked + .track{ background: var(--accent-dim); }
+  .switch input:checked + .track::before{
+    transform: translateX(20px);
+    background: var(--accent);
+  }
+
+  .chart-wrap{
+    background:#0f1112;
+    border:1px solid var(--panel-line);
+    border-radius: 3px;
+    padding: 16px 18px 10px;
+  }
+  .chart-legend{
+    display:flex;
+    gap: 18px;
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .chart-legend span{ display:flex; align-items:center; gap:6px; }
+  .dot{ width:8px; height:8px; border-radius:50%; display:inline-block; }
+  .dot.pot{ background: var(--accent); }
+  .dot.contrib{ background: var(--panel-line); border:1px solid var(--muted); }
+  svg text{ font-family: 'Consolas', monospace; }
+
+  .table-wrap{
+    max-height: 220px;
+    overflow-y: auto;
+    border:1px solid var(--panel-line);
+    border-radius: 3px;
+  }
+  table{
+    width:100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+  }
+  th{
+    position: sticky; top:0;
+    background: #191c1e;
+    color: var(--muted);
+    text-align:right;
+    font-weight:500;
+    padding: 8px 10px;
+    border-bottom:1px solid var(--panel-line);
+  }
+  th:first-child, td:first-child{ text-align:left; }
+  td{
+    text-align:right;
+    padding: 6px 10px;
+    color: var(--text);
+    font-family: 'Consolas', monospace;
+    border-bottom:1px solid #1c1f21;
+  }
+  tr:last-child td{ border-bottom:none; }
+
+  footer{
+    max-width: 980px;
+    width:100%;
+    margin-top: 20px;
+    font-size: 11.5px;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Pension Forecast</h1>
+  <p>Project a private pension pot to retirement and estimate the income it could provide.</p>
+</header>
+
+<div class="layout">
+  <div class="panel">
+    <div class="panel-label">Inputs</div>
+
+    <div class="field">
+      <label for="pot">Current Pension Pot</label>
+      <div class="input-wrap">
+        <span class="prefix">£</span>
+        <input type="number" id="pot" class="with-prefix" value="45000" min="0" step="1000">
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="age">Current Age</label>
+      <input type="number" id="age" value="35" min="16" max="99" step="1">
+    </div>
+
+    <div class="field">
+      <label for="retireAge">Expected Retirement Age</label>
+      <input type="number" id="retireAge" value="67" min="16" max="99" step="1">
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="field">
+      <label for="growth">Expected Annual Growth</label>
+      <div class="input-wrap">
+        <input type="number" id="growth" class="with-suffix" value="5" min="-20" max="20" step="0.1">
+        <span class="suffix">%</span>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="contrib">Additional Annual Contribution</label>
+      <div class="input-wrap">
+        <span class="prefix">£</span>
+        <input type="number" id="contrib" class="with-prefix" value="3600" min="0" step="100">
+      </div>
+      <span class="hint">Amount contributed in year one</span>
+    </div>
+
+    <div class="field">
+      <label for="contribGrowth">Contribution Growth</label>
+      <div class="input-wrap">
+        <input type="number" id="contribGrowth" class="with-suffix" value="2.5" min="0" max="20" step="0.1">
+        <span class="suffix">%</span>
+      </div>
+      <span class="hint">How much the contribution rises each year (e.g. with salary/inflation)</span>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="field">
+      <label for="withdraw">Withdrawal Rate</label>
+      <div class="input-wrap">
+        <input type="number" id="withdraw" class="with-suffix" value="4" min="0.5" max="20" step="0.1">
+        <span class="suffix">%</span>
+      </div>
+      <span class="hint">Annual income taken as a % of the pot at retirement</span>
+    </div>
+
+    <div class="field" style="margin-bottom:0;">
+      <label for="inflation">Inflation Rate</label>
+      <div class="input-wrap">
+        <input type="number" id="inflation" class="with-suffix" value="2.5" min="0" max="15" step="0.1">
+        <span class="suffix">%</span>
+      </div>
+      <span class="hint">Used to discount future values to today's terms</span>
+    </div>
+  </div>
+
+  <div class="panel results">
+    <div class="headline-row">
+      <div class="headline">
+        <div class="panel-label" id="potLabel">Pot at Retirement</div>
+        <div class="value" id="potValue">£0</div>
+        <div class="sub" id="potSub"></div>
+      </div>
+      <div class="headline">
+        <div class="panel-label" id="incomeLabel">Annual Pension Income</div>
+        <div class="value income" id="incomeValue">£0</div>
+        <div class="sub" id="incomeSub"></div>
+      </div>
+    </div>
+
+    <div class="toggle-row">
+      <div class="label">
+        Show in today's terms
+        <span class="hint">Adjusts for inflation between now and retirement</span>
+      </div>
+      <div class="switch">
+        <input type="checkbox" id="realToggle" checked>
+        <label class="track" for="realToggle"></label>
+      </div>
+    </div>
+
+    <div class="chart-wrap">
+      <div class="chart-legend">
+        <span><i class="dot pot"></i>Pension pot</span>
+        <span><i class="dot contrib"></i>Total contributed</span>
+      </div>
+      <svg id="chart" viewBox="0 0 600 220" width="100%" height="220"></svg>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Age</th><th>Contribution</th><th>Growth</th><th>Pot (nominal)</th></tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<footer>
+  Illustrative only — assumes annual compounding, contributions added at each year end and growing at a fixed rate, and a constant withdrawal rate applied to the pot at retirement. Not financial advice.
+</footer>
+
+<script>
+const $ = id => document.getElementById(id);
+const inputs = ['pot','age','retireAge','growth','contrib','contribGrowth','withdraw','inflation'].map(id => $(id));
+const toggle = $('realToggle');
+
+function fmtGBP(n){
+  return '£' + Math.round(n).toLocaleString('en-GB');
+}
+
+function project(){
+  const pot0 = parseFloat($('pot').value) || 0;
+  const age = parseFloat($('age').value) || 0;
+  const retireAge = parseFloat($('retireAge').value) || 0;
+  const growth = (parseFloat($('growth').value) || 0) / 100;
+  let contrib = parseFloat($('contrib').value) || 0;
+  const contribGrowth = (parseFloat($('contribGrowth').value) || 0) / 100;
+  const withdraw = (parseFloat($('withdraw').value) || 0) / 100;
+  const inflation = (parseFloat($('inflation').value) || 0) / 100;
+
+  const years = Math.max(0, Math.round(retireAge - age));
+  const rows = [];
+  let pot = pot0;
+  let totalContributed = 0;
+
+  rows.push({age: age, contrib: 0, growthAmt: 0, pot: pot, totalContributed: 0});
+
+  for(let y = 1; y <= years; y++){
+    const growthAmt = pot * growth;
+    pot = pot + growthAmt + contrib;
+    totalContributed += contrib;
+    rows.push({age: age + y, contrib: contrib, growthAmt: growthAmt, pot: pot, totalContributed: totalContributed});
+    contrib = contrib * (1 + contribGrowth);
+  }
+
+  return {years, rows, finalPot: pot, totalContributed};
+}
+
+function render(){
+  const {years, rows, finalPot, totalContributed} = project();
+  const withdraw = (parseFloat($('withdraw').value) || 0) / 100;
+  const inflation = (parseFloat($('inflation').value) || 0) / 100;
+  const showReal = toggle.checked;
+  const discount = Math.pow(1 + inflation, years);
+
+  const nominalIncome = finalPot * withdraw;
+  const displayPot = showReal ? finalPot / discount : finalPot;
+  const displayIncome = showReal ? nominalIncome / discount : nominalIncome;
+
+  $('potValue').textContent = fmtGBP(displayPot);
+  $('incomeValue').textContent = fmtGBP(displayIncome);
+  $('potLabel').textContent = 'Pot at Retirement' + (showReal ? " (today's terms)" : ' (nominal)');
+  $('incomeLabel').textContent = 'Annual Pension Income' + (showReal ? " (today's terms)" : ' (nominal)');
+  $('potSub').textContent = years + ' years of growth' + (showReal ? ', discounted for inflation' : ', no inflation adjustment');
+  $('incomeSub').textContent = (withdraw*100).toFixed(1) + '% withdrawal rate' + (showReal ? ' · real terms' : ' · nominal terms');
+
+  renderTable(rows);
+  renderChart(rows, showReal, discount, years);
+}
+
+function renderTable(rows){
+  const body = $('tableBody');
+  body.innerHTML = '';
+  rows.forEach(r => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${Math.round(r.age)}</td><td>${fmtGBP(r.contrib)}</td><td>${fmtGBP(r.growthAmt)}</td><td>${fmtGBP(r.pot)}</td>`;
+    body.appendChild(tr);
+  });
+  body.parentElement.parentElement.scrollTop = 0;
+}
+
+function renderChart(rows, showReal, discount, years){
+  const svg = $('chart');
+  const W = 600, H = 220, padL = 50, padR = 10, padT = 10, padB = 24;
+  const n = rows.length;
+
+  const potSeries = rows.map((r,i) => {
+    const yrsIn = i;
+    const d = showReal ? Math.pow(1 + (parseFloat($('inflation').value)||0)/100, yrsIn) : 1;
+    return r.pot / d;
+  });
+  const contribSeries = rows.map((r,i) => {
+    const yrsIn = i;
+    const d = showReal ? Math.pow(1 + (parseFloat($('inflation').value)||0)/100, yrsIn) : 1;
+    return (r.pot - r.totalContributed - (rows[0].pot)) >= 0 ? (r.totalContributed + rows[0].pot) / d : r.totalContributed / d;
+  });
+
+  const maxVal = Math.max(...potSeries, 1);
+  const x = i => padL + (n <= 1 ? 0 : (i/(n-1)) * (W - padL - padR));
+  const y = v => H - padB - (v / maxVal) * (H - padT - padB);
+
+  const path = arr => arr.map((v,i) => `${i===0?'M':'L'} ${x(i).toFixed(1)} ${y(v).toFixed(1)}`).join(' ');
+
+  const gridLines = 4;
+  let gridSvg = '';
+  for(let g=0; g<=gridLines; g++){
+    const val = maxVal * g / gridLines;
+    const yy = y(val);
+    gridSvg += `<line x1="${padL}" y1="${yy}" x2="${W-padR}" y2="${yy}" stroke="#24282b" stroke-width="1"/>`;
+    gridSvg += `<text x="${padL-6}" y="${yy+3}" text-anchor="end" font-size="9" fill="#8b9094">${Math.round(val/1000)}k</text>`;
+  }
+
+  const ageLabelEvery = Math.max(1, Math.ceil(n/6));
+  let ageLabels = '';
+  rows.forEach((r,i) => {
+    if(i % ageLabelEvery === 0 || i === n-1){
+      ageLabels += `<text x="${x(i)}" y="${H-6}" text-anchor="middle" font-size="9" fill="#8b9094">${Math.round(r.age)}</text>`;
+    }
+  });
+
+  svg.innerHTML = `
+    ${gridSvg}
+    <path d="${path(contribSeries)}" fill="none" stroke="#4a4f52" stroke-width="1.5" stroke-dasharray="3,3"/>
+    <path d="${path(potSeries)}" fill="none" stroke="#c9a86a" stroke-width="2"/>
+    <circle cx="${x(n-1)}" cy="${y(potSeries[n-1])}" r="3.5" fill="#c9a86a"/>
+    ${ageLabels}
+  `;
+}
+
+inputs.forEach(el => el.addEventListener('input', render));
+toggle.addEventListener('change', render);
+
+render();
+</script>
+</body>
+</html>
