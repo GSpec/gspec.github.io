@@ -386,6 +386,33 @@ const $ = id => document.getElementById(id);
 const inputs = ['pot','age','retireAge','growth','contrib','contribGrowth','withdraw','inflation'].map(id => $(id));
 const toggle = $('realToggle');
 
+const STORAGE_KEY = 'pensionForecast:v1';
+
+function saveState(){
+  try{
+    const state = {};
+    inputs.forEach(el => { state[el.id] = el.value; });
+    state.realToggle = toggle.checked;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch(e){
+    // localStorage unavailable (e.g. private browsing) — fail silently
+  }
+}
+
+function loadState(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(!raw) return;
+    const state = JSON.parse(raw);
+    inputs.forEach(el => {
+      if(state[el.id] !== undefined) el.value = state[el.id];
+    });
+    if(state.realToggle !== undefined) toggle.checked = state.realToggle;
+  } catch(e){
+    // ignore corrupt/inaccessible storage
+  }
+}
+
 function fmtGBP(n){
   return '£' + Math.round(n).toLocaleString('en-GB');
 }
@@ -522,9 +549,10 @@ function renderChart(rows, showReal, discount, years){
   `;
 }
 
-inputs.forEach(el => el.addEventListener('input', render));
-toggle.addEventListener('change', render);
+inputs.forEach(el => el.addEventListener('input', () => { saveState(); render(); }));
+toggle.addEventListener('change', () => { saveState(); render(); });
 
+loadState();
 render();
 </script>
 </body>
