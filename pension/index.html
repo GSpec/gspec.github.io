@@ -503,7 +503,9 @@ function renderTable(rows){
 
 function renderChart(rows, showReal, discount, years){
   const svg = $('chart');
-  const W = 600, H = 220, padL = 50, padR = 10, padT = 10, padB = 24;
+  const measuredW = Math.round(svg.getBoundingClientRect().width) || 600;
+  const W = Math.max(measuredW, 300), H = 220, padL = 50, padR = 10, padT = 10, padB = 24;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
   const n = rows.length;
 
   const potSeries = rows.map((r,i) => {
@@ -551,6 +553,12 @@ function renderChart(rows, showReal, discount, years){
 
 inputs.forEach(el => el.addEventListener('input', () => { saveState(); render(); }));
 toggle.addEventListener('change', () => { saveState(); render(); });
+
+let resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(render, 100);
+});
 
 loadState();
 render();
