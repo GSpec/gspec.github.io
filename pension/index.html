@@ -220,8 +220,6 @@
   svg text{ font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
 
   .table-wrap{
-    max-height: 220px;
-    overflow-y: auto;
     border:1px solid var(--panel-line);
     border-radius: 3px;
   }
@@ -231,7 +229,6 @@
     font-size: 12.5px;
   }
   th{
-    position: sticky; top:0;
     background: #141B34;
     color: var(--muted);
     text-align:right;
@@ -475,7 +472,6 @@ function renderTable(rows){
     tr.innerHTML = `<td>${Math.round(r.age)}</td><td>${fmtGBP(r.contrib)}</td><td>${fmtGBP(r.growthAmt)}</td><td>${fmtGBP(r.pot)}</td>`;
     body.appendChild(tr);
   });
-  body.parentElement.parentElement.scrollTop = 0;
 }
 
 function renderChart(rows, showReal, discount, years){
