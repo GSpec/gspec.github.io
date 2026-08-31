@@ -964,13 +964,13 @@ function renderIncomeTimeline(finalPot, showReal){
     const phase1Nominal = gapIncomeToday * discountTo(timeline.retireAge);
     const phase1Display = showReal ? gapIncomeToday : phase1Nominal;
     $('phase1Age').textContent = `Age ${Math.round(timeline.retireAge)}–${Math.round(timeline.accessAge)}`;
-    $('phase1Value').textContent = fmtGBP(phase1Display) + '/yr';
+    $('phase1Value').textContent = fmtGBP(phase1Display);
   }
 
   const phase2Display = showReal ? timeline.pensionIncomeNominal / discountTo(timeline.accessAge) : timeline.pensionIncomeNominal;
   const phase2End = timeline.statePensionAge > timeline.accessAge ? Math.round(timeline.statePensionAge) : null;
   $('phase2Age').textContent = phase2End ? `Age ${Math.round(timeline.accessAge)}–${phase2End}` : `Age ${Math.round(timeline.accessAge)}+`;
-  $('phase2Value').textContent = fmtGBP(phase2Display) + '/yr';
+  $('phase2Value').textContent = fmtGBP(phase2Display);
 
   // Assumes the private pension withdrawal keeps pace with inflation once it starts,
   // so it can be combined on a like-for-like nominal basis with State Pension.
@@ -978,7 +978,7 @@ function renderIncomeTimeline(finalPot, showReal){
   const phase3Nominal = pensionAtStatePension + timeline.statePensionNominal;
   const phase3Display = showReal ? phase3Nominal / discountTo(timeline.statePensionAge) : phase3Nominal;
   $('phase3Age').textContent = `Age ${Math.round(timeline.statePensionAge)}+`;
-  $('phase3Value').textContent = fmtGBP(phase3Display) + '/yr';
+  $('phase3Value').textContent = fmtGBP(phase3Display);
 }
 
 function renderGapSummary(finalPot, showReal){
