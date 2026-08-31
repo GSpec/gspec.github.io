@@ -200,6 +200,48 @@
   }
   .warning.show{ display:flex; }
 
+  .adv-group{ display:none; }
+  .adv-group.show{ display:block; }
+  .adv-inline{ display:none; }
+  .adv-inline.show{ display:inline-flex; }
+
+  .headline .value.neutral{ color: var(--text); }
+  .headline .value.good{ color: var(--primary); }
+  .headline .value.bad{ color: var(--accent); }
+
+  .phase-list{
+    border: 1px solid var(--panel-line);
+    border-radius: 3px;
+    overflow:hidden;
+  }
+  .phase-item{
+    display:flex;
+    justify-content: space-between;
+    align-items:center;
+    gap: 12px;
+    padding: 14px 16px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--panel-line);
+  }
+  .phase-item:last-child{ border-bottom:none; }
+  .phase-item .phase-age{
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+  .phase-item .phase-desc{
+    font-size: 13px;
+    color: var(--text);
+  }
+  .phase-item .phase-value{
+    font-size: 19px;
+    font-weight:600;
+    color: var(--primary);
+    white-space:nowrap;
+  }
+
   .chart-wrap{
     background:#141B34;
     border:1px solid var(--panel-line);
@@ -222,6 +264,7 @@
   .dot{ width:8px; height:8px; border-radius:50%; display:inline-block; }
   .dot.pot{ background: var(--secondary); }
   .dot.contrib{ background: var(--panel-line); border:1px solid var(--muted); }
+  .dot.gap{ background: var(--primary); }
   svg text{ font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
 
   .table-wrap{
@@ -362,13 +405,87 @@
       <span class="hint">Annual income taken as a % of the pot at retirement</span>
     </div>
 
-    <div class="field" style="margin-bottom:0;">
+    <div class="field">
       <label for="inflation">Inflation Rate</label>
       <div class="input-wrap">
         <input type="number" id="inflation" class="with-suffix" value="2.5" min="0" max="15" step="0.1">
         <span class="suffix">%</span>
       </div>
       <span class="hint">Used to discount future values to today's terms</span>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="field">
+      <label for="statePensionAge">State Pension Age</label>
+      <input type="number" id="statePensionAge" value="67" min="16" max="99" step="1">
+    </div>
+
+    <div class="field" style="margin-bottom:0;">
+      <label for="statePensionAmount">State Pension Annual Amount</label>
+      <div class="input-wrap">
+        <span class="prefix">£</span>
+        <input type="number" id="statePensionAmount" class="with-prefix" value="12547.60" min="0" step="0.01">
+      </div>
+      <span class="hint">In today's terms — full new State Pension is currently around this level</span>
+    </div>
+
+    <div class="toggle-row" style="margin-top:22px;">
+      <div class="label">
+        Include Gap Savings
+        <span class="hint">Model savings to bridge early retirement to pension access age</span>
+      </div>
+      <div class="switch">
+        <input type="checkbox" id="advancedToggle">
+        <label class="track" for="advancedToggle"></label>
+      </div>
+    </div>
+
+    <div class="adv-group" id="advInputsGroup">
+      <div class="divider"></div>
+
+      <div class="field">
+        <label for="accessAge">Pension Access Age</label>
+        <input type="number" id="accessAge" value="57" min="16" max="99" step="1">
+        <span class="hint">Earliest age you can draw from the pension pot</span>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="field">
+        <label for="gapPot">Current Gap Savings</label>
+        <div class="input-wrap">
+          <span class="prefix">£</span>
+          <input type="number" id="gapPot" class="with-prefix" value="10000" min="0" step="1000">
+        </div>
+        <span class="hint">Savings outside your pension — ISA, general investments, etc.</span>
+      </div>
+
+      <div class="field">
+        <label for="gapContrib">Additional Annual Gap Contribution</label>
+        <div class="input-wrap">
+          <span class="prefix">£</span>
+          <input type="number" id="gapContrib" class="with-prefix" value="2400" min="0" step="100">
+        </div>
+        <span class="hint">Amount contributed in year one, growing with Contribution Growth</span>
+      </div>
+
+      <div class="field">
+        <label for="gapGrowth">Gap Savings Growth</label>
+        <div class="input-wrap">
+          <input type="number" id="gapGrowth" class="with-suffix" value="4" min="-20" max="20" step="0.1">
+          <span class="suffix">%</span>
+        </div>
+      </div>
+
+      <div class="field" style="margin-bottom:0;">
+        <label for="gapIncome">Target Income During the Gap</label>
+        <div class="input-wrap">
+          <span class="prefix">£</span>
+          <input type="number" id="gapIncome" class="with-prefix" value="20000" min="0" step="500">
+        </div>
+        <span class="hint">In today's terms — what you'd need to live on before the pension is accessible</span>
+      </div>
     </div>
   </div>
 
@@ -401,17 +518,57 @@
       </div>
     </div>
 
+    <div class="adv-group" id="advOutputsGroup">
+      <div class="headline-row" style="margin-bottom: 22px;">
+        <div class="headline">
+          <div class="panel-label">Gap Savings Needed</div>
+          <div class="value neutral" id="gapNeededValue">£0</div>
+          <div class="sub" id="gapNeededSub"></div>
+        </div>
+        <div class="headline">
+          <div class="panel-label">Projected Gap Savings</div>
+          <div class="value neutral" id="gapProjectedValue">£0</div>
+          <div class="sub" id="gapProjectedSub"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="phase-list">
+      <div class="phase-item" id="phase1Item">
+        <div class="phase-left">
+          <div class="phase-age" id="phase1Age">—</div>
+          <div class="phase-desc">Gap savings drawdown</div>
+        </div>
+        <div class="phase-value" id="phase1Value">£0</div>
+      </div>
+      <div class="phase-item">
+        <div class="phase-left">
+          <div class="phase-age" id="phase2Age">—</div>
+          <div class="phase-desc">Private pension income</div>
+        </div>
+        <div class="phase-value" id="phase2Value">£0</div>
+      </div>
+      <div class="phase-item">
+        <div class="phase-left">
+          <div class="phase-age" id="phase3Age">—</div>
+          <div class="phase-desc">Pension + State Pension</div>
+        </div>
+        <div class="phase-value" id="phase3Value">£0</div>
+      </div>
+    </div>
+
     <div class="chart-wrap">
       <div class="chart-legend">
         <span><i class="dot pot"></i>Pension pot</span>
         <span><i class="dot contrib"></i>Total contributed</span>
+        <span class="adv-inline" id="gapLegend"><i class="dot gap"></i>Gap savings</span>
       </div>
       <svg id="chart" viewBox="0 0 600 400"></svg>
     </div>
 
     <div class="toggle-row">
       <div class="label">
-        Show year-by-year breakdown
+        Show year-by-year pension pot breakdown
         <span class="hint">A detailed table of contributions, growth, and pot value by age</span>
       </div>
       <div class="switch">
@@ -428,6 +585,28 @@
         <tbody id="tableBody"></tbody>
       </table>
     </div>
+
+    <div class="adv-group" id="advGapTableGroup">
+      <div class="toggle-row">
+        <div class="label">
+          Show year-by-year gap savings breakdown
+          <span class="hint">Contributions while working, then withdrawals (shown negative) during the gap</span>
+        </div>
+        <div class="switch">
+          <input type="checkbox" id="gapTableToggle">
+          <label class="track" for="gapTableToggle"></label>
+        </div>
+      </div>
+
+      <div class="table-wrap" id="gapTableWrap">
+        <table>
+          <thead>
+            <tr><th>Age</th><th>Contribution</th><th>Growth</th><th>Pot (nominal)</th></tr>
+          </thead>
+          <tbody id="gapTableBody"></tbody>
+        </table>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -437,13 +616,35 @@
 
 <script>
 const $ = id => document.getElementById(id);
-const inputs = ['pot','age','retireAge','growth','contrib','contribGrowth','withdraw','inflation'].map(id => $(id));
+const inputs = [
+  'pot','age','retireAge','growth','contrib','contribGrowth','withdraw','inflation',
+  'accessAge','gapPot','gapContrib','gapGrowth','gapIncome','statePensionAge','statePensionAmount'
+].map(id => $(id));
 const toggle = $('realToggle');
 const tableToggle = $('tableToggle');
 const tableWrap = $('tableWrap');
+const gapTableToggle = $('gapTableToggle');
+const gapTableWrap = $('gapTableWrap');
+const advancedToggle = $('advancedToggle');
+const advGroups = document.querySelectorAll('.adv-group, .adv-inline');
 
 tableToggle.addEventListener('change', () => {
   tableWrap.classList.toggle('show', tableToggle.checked);
+});
+
+gapTableToggle.addEventListener('change', () => {
+  gapTableWrap.classList.toggle('show', gapTableToggle.checked);
+});
+
+function setAdvancedVisibility(){
+  const on = advancedToggle.checked;
+  advGroups.forEach(g => g.classList.toggle('show', on));
+}
+
+advancedToggle.addEventListener('change', () => {
+  setAdvancedVisibility();
+  saveState();
+  render();
 });
 
 const STORAGE_KEY = 'pensionForecast:v1';
@@ -453,6 +654,9 @@ function saveState(){
     const state = {};
     inputs.forEach(el => { state[el.id] = el.value; });
     state.realToggle = toggle.checked;
+    state.tableToggle = tableToggle.checked;
+    state.gapTableToggle = gapTableToggle.checked;
+    state.advancedToggle = advancedToggle.checked;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   } catch(e){
     // localStorage unavailable (e.g. private browsing) — fail silently
@@ -468,13 +672,24 @@ function loadState(){
       if(state[el.id] !== undefined) el.value = state[el.id];
     });
     if(state.realToggle !== undefined) toggle.checked = state.realToggle;
+    if(state.tableToggle !== undefined){
+      tableToggle.checked = state.tableToggle;
+      tableWrap.classList.toggle('show', tableToggle.checked);
+    }
+    if(state.gapTableToggle !== undefined){
+      gapTableToggle.checked = state.gapTableToggle;
+      gapTableWrap.classList.toggle('show', gapTableToggle.checked);
+    }
+    if(state.advancedToggle !== undefined) advancedToggle.checked = state.advancedToggle;
+    setAdvancedVisibility();
   } catch(e){
     // ignore corrupt/inaccessible storage
   }
 }
 
 function fmtGBP(n){
-  return '£' + Math.round(n).toLocaleString('en-GB');
+  const sign = n < 0 ? '-' : '';
+  return sign + '£' + Math.round(Math.abs(n)).toLocaleString('en-GB');
 }
 
 function fmtGBPAbbrev(n){
@@ -524,6 +739,149 @@ function project(){
   return {years, rows, finalPot: pot, totalContributed};
 }
 
+// Grows the gap (bridge) savings pot from now until retirement age,
+// using the same contribution-growth rate as the pension.
+function projectGapPot(){
+  const gapPot0 = parseFloat($('gapPot').value) || 0;
+  const age = parseFloat($('age').value) || 0;
+  const retireAge = parseFloat($('retireAge').value) || 0;
+  const gapGrowth = (parseFloat($('gapGrowth').value) || 0) / 100;
+  let gapContrib = parseFloat($('gapContrib').value) || 0;
+  const contribGrowth = (parseFloat($('contribGrowth').value) || 0) / 100;
+
+  const years = Math.max(0, Math.round(retireAge - age));
+  let pot = gapPot0;
+  for(let y = 1; y <= years; y++){
+    pot = pot * (1 + gapGrowth) + gapContrib;
+    gapContrib = gapContrib * (1 + contribGrowth);
+  }
+  return pot;
+}
+
+// Year-by-year gap pot value during accumulation only (current age -> retirement age),
+// one value per index to line up with the main pension chart's row indices.
+function projectGapAccumSeries(years){
+  const gapPot0 = parseFloat($('gapPot').value) || 0;
+  const gapGrowth = (parseFloat($('gapGrowth').value) || 0) / 100;
+  let gapContrib = parseFloat($('gapContrib').value) || 0;
+  const contribGrowth = (parseFloat($('contribGrowth').value) || 0) / 100;
+
+  let pot = gapPot0;
+  const series = [pot];
+  for(let y = 1; y <= years; y++){
+    pot = pot * (1 + gapGrowth) + gapContrib;
+    series.push(pot);
+    gapContrib = gapContrib * (1 + contribGrowth);
+  }
+  return series;
+}
+
+// Full year-by-year gap savings detail across both accumulation (building up while
+// working) and drawdown (retirement age -> pension access age) phases, for the table.
+function projectGapDetailed(){
+  const gapPot0 = parseFloat($('gapPot').value) || 0;
+  const age = parseFloat($('age').value) || 0;
+  const retireAge = parseFloat($('retireAge').value) || 0;
+  const accessAge = parseFloat($('accessAge').value) || 0;
+  const gapGrowth = (parseFloat($('gapGrowth').value) || 0) / 100;
+  let gapContrib = parseFloat($('gapContrib').value) || 0;
+  const contribGrowth = (parseFloat($('contribGrowth').value) || 0) / 100;
+  const targetIncomeToday = parseFloat($('gapIncome').value) || 0;
+  const inflation = (parseFloat($('inflation').value) || 0) / 100;
+
+  const accumYears = Math.max(0, Math.round(retireAge - age));
+  const gapYears = Math.max(0, Math.round(accessAge - retireAge));
+
+  const rows = [];
+  let pot = gapPot0;
+  rows.push({age: age, cashFlow: 0, growthAmt: 0, pot: pot, phase: 'accum'});
+
+  for(let y = 1; y <= accumYears; y++){
+    const growthAmt = pot * gapGrowth;
+    pot = pot + growthAmt + gapContrib;
+    rows.push({age: age + y, cashFlow: gapContrib, growthAmt: growthAmt, pot: pot, phase: 'accum'});
+    gapContrib = gapContrib * (1 + contribGrowth);
+  }
+
+  for(let y = 0; y < gapYears; y++){
+    const withdrawAge = retireAge + y;
+    const nominalIncomeNeeded = targetIncomeToday * Math.pow(1 + inflation, withdrawAge - age);
+    pot -= nominalIncomeNeeded;
+    const growthAmt = pot * gapGrowth;
+    pot = pot + growthAmt;
+    rows.push({age: withdrawAge + 1, cashFlow: -nominalIncomeNeeded, growthAmt: growthAmt, pot: pot, phase: 'drawdown'});
+  }
+
+  return rows;
+}
+
+// Simulates drawing the target income (entered in today's terms) from the
+// gap pot each year between retirement and pension access age, and works
+// out the pot required at retirement to sustain it without running dry.
+function gapRequiredAndDrawdown(startPot){
+  const age = parseFloat($('age').value) || 0;
+  const retireAge = parseFloat($('retireAge').value) || 0;
+  const accessAge = parseFloat($('accessAge').value) || 0;
+  const gapGrowth = (parseFloat($('gapGrowth').value) || 0) / 100;
+  const targetIncomeToday = parseFloat($('gapIncome').value) || 0;
+  const inflation = (parseFloat($('inflation').value) || 0) / 100;
+
+  const gapYears = Math.max(0, Math.round(accessAge - retireAge));
+
+  let required = 0;
+  let pot = startPot;
+  let depletedAtAge = null;
+
+  for(let y = 0; y < gapYears; y++){
+    const ageNow = retireAge + y;
+    const nominalIncomeNeeded = targetIncomeToday * Math.pow(1 + inflation, ageNow - age);
+
+    required += nominalIncomeNeeded / Math.pow(1 + gapGrowth, y);
+
+    pot -= nominalIncomeNeeded;
+    if(pot < 0 && depletedAtAge === null){
+      depletedAtAge = ageNow;
+    }
+    pot = pot * (1 + gapGrowth);
+  }
+
+  return { gapYears, required, finalPot: pot, depletedAtAge };
+}
+
+// Extends the private pension's growth beyond retirement to access age (untouched,
+// no further contributions), and works out State Pension in nominal terms at its start age.
+// Computes the full income timeline: private pension (from access age, or retirement
+// age if gap savings aren't enabled), State Pension (always), and gap savings figures
+// (only meaningful when gap savings are enabled).
+function computeTimeline(privateFinalPot){
+  const gapEnabled = advancedToggle.checked;
+  const age = parseFloat($('age').value) || 0;
+  const retireAge = parseFloat($('retireAge').value) || 0;
+  const accessAge = gapEnabled ? (parseFloat($('accessAge').value) || 0) : retireAge;
+  const statePensionAge = parseFloat($('statePensionAge').value) || 0;
+  const growth = (parseFloat($('growth').value) || 0) / 100;
+  const withdraw = (parseFloat($('withdraw').value) || 0) / 100;
+  const inflation = (parseFloat($('inflation').value) || 0) / 100;
+  const statePensionAmountToday = parseFloat($('statePensionAmount').value) || 0;
+
+  const extraGrowthYears = Math.max(0, accessAge - retireAge);
+  const pensionAtAccess = privateFinalPot * Math.pow(1 + growth, extraGrowthYears);
+  const pensionIncomeNominal = pensionAtAccess * withdraw;
+
+  const statePensionNominal = statePensionAmountToday * Math.pow(1 + inflation, Math.max(0, statePensionAge - age));
+
+  let gapProjected = 0;
+  let gapCalc = { gapYears: 0, required: 0, finalPot: 0, depletedAtAge: null };
+  if(gapEnabled){
+    gapProjected = projectGapPot();
+    gapCalc = gapRequiredAndDrawdown(gapProjected);
+  }
+
+  return { gapEnabled, accessAge, statePensionAge, retireAge, age, inflation,
+    pensionAtAccess, pensionIncomeNominal, statePensionNominal,
+    gapProjected, gapCalc };
+}
+
 function checkWarnings(){
   const age = parseFloat($('age').value);
   const retireAge = parseFloat($('retireAge').value);
@@ -537,6 +895,23 @@ function checkWarnings(){
     msg = 'That\'s an unusually long time to retirement — double check your ages.';
   } else if((parseFloat($('withdraw').value) || 0) > 10){
     msg = 'A withdrawal rate this high may deplete the pot well before the end of retirement.';
+  }
+
+  if(!msg){
+    const gapEnabled = advancedToggle.checked;
+    const statePensionAge = parseFloat($('statePensionAge').value) || 0;
+    const accessAge = gapEnabled ? (parseFloat($('accessAge').value) || 0) : retireAge;
+
+    if(statePensionAge < accessAge){
+      msg = gapEnabled
+        ? 'State Pension age is earlier than your pension access age — check these figures.'
+        : 'State Pension age is earlier than your retirement age — check these figures.';
+    } else if(gapEnabled){
+      const gapCalc = gapRequiredAndDrawdown(projectGapPot());
+      if(gapCalc.depletedAtAge !== null){
+        msg = `Your gap savings may run out around age ${Math.round(gapCalc.depletedAtAge)} — before pension access at ${Math.round(accessAge)}.`;
+      }
+    }
   }
 
   if(msg){
@@ -568,6 +943,66 @@ function render(){
 
   renderTable(rows);
   renderChart(rows, showReal, discount, years);
+  renderIncomeTimeline(finalPot, showReal);
+  if(advancedToggle.checked){
+    renderGapSummary(finalPot, showReal);
+    renderGapTable();
+  }
+}
+
+function renderIncomeTimeline(finalPot, showReal){
+  const timeline = computeTimeline(finalPot);
+  const discountTo = targetAge => Math.pow(1 + timeline.inflation, Math.max(0, targetAge - timeline.age));
+
+  const showGapPhase = timeline.gapEnabled && timeline.gapCalc.gapYears > 0;
+  $('phase1Item').style.display = showGapPhase ? 'flex' : 'none';
+
+  if(showGapPhase){
+    const gapIncomeToday = parseFloat($('gapIncome').value) || 0;
+    const phase1Nominal = gapIncomeToday * discountTo(timeline.retireAge);
+    const phase1Display = showReal ? gapIncomeToday : phase1Nominal;
+    $('phase1Age').textContent = `Age ${Math.round(timeline.retireAge)}–${Math.round(timeline.accessAge)}`;
+    $('phase1Value').textContent = fmtGBP(phase1Display) + '/yr';
+  }
+
+  const phase2Display = showReal ? timeline.pensionIncomeNominal / discountTo(timeline.accessAge) : timeline.pensionIncomeNominal;
+  const phase2End = timeline.statePensionAge > timeline.accessAge ? Math.round(timeline.statePensionAge) : null;
+  $('phase2Age').textContent = phase2End ? `Age ${Math.round(timeline.accessAge)}–${phase2End}` : `Age ${Math.round(timeline.accessAge)}+`;
+  $('phase2Value').textContent = fmtGBP(phase2Display) + '/yr';
+
+  // Assumes the private pension withdrawal keeps pace with inflation once it starts,
+  // so it can be combined on a like-for-like nominal basis with State Pension.
+  const pensionAtStatePension = timeline.pensionIncomeNominal * Math.pow(1 + timeline.inflation, Math.max(0, timeline.statePensionAge - timeline.accessAge));
+  const phase3Nominal = pensionAtStatePension + timeline.statePensionNominal;
+  const phase3Display = showReal ? phase3Nominal / discountTo(timeline.statePensionAge) : phase3Nominal;
+  $('phase3Age').textContent = `Age ${Math.round(timeline.statePensionAge)}+`;
+  $('phase3Value').textContent = fmtGBP(phase3Display) + '/yr';
+}
+
+function renderGapSummary(finalPot, showReal){
+  const timeline = computeTimeline(finalPot);
+  const discountTo = targetAge => Math.pow(1 + timeline.inflation, Math.max(0, targetAge - timeline.age));
+
+  const neededDisplay = showReal ? timeline.gapCalc.required / discountTo(timeline.retireAge) : timeline.gapCalc.required;
+  const projectedDisplay = showReal ? timeline.gapProjected / discountTo(timeline.retireAge) : timeline.gapProjected;
+  $('gapNeededValue').textContent = fmtGBP(neededDisplay);
+  $('gapProjectedValue').textContent = fmtGBP(projectedDisplay);
+
+  const sufficient = timeline.gapProjected >= timeline.gapCalc.required;
+  const projectedEl = $('gapProjectedValue');
+  projectedEl.classList.remove('neutral');
+  projectedEl.classList.toggle('good', sufficient);
+  projectedEl.classList.toggle('bad', !sufficient);
+
+  if(timeline.gapCalc.gapYears === 0){
+    $('gapNeededSub').textContent = 'No gap — pension accessible at or before retirement';
+    $('gapProjectedSub').textContent = '';
+  } else {
+    const diffNominal = Math.abs(timeline.gapProjected - timeline.gapCalc.required);
+    const diffDisplay = showReal ? diffNominal / discountTo(timeline.retireAge) : diffNominal;
+    $('gapNeededSub').textContent = `To fund ${timeline.gapCalc.gapYears} years to age ${Math.round(timeline.accessAge)}`;
+    $('gapProjectedSub').textContent = (sufficient ? 'Surplus of ' : 'Shortfall of ') + fmtGBP(diffDisplay);
+  }
 }
 
 function renderTable(rows){
@@ -576,6 +1011,17 @@ function renderTable(rows){
   rows.forEach(r => {
     const tr = document.createElement('tr');
     tr.innerHTML = `<td>${Math.round(r.age)}</td><td>${fmtTableGBP(r.contrib)}</td><td>${fmtTableGBP(r.growthAmt)}</td><td>${fmtTableGBP(r.pot)}</td>`;
+    body.appendChild(tr);
+  });
+}
+
+function renderGapTable(){
+  const rows = projectGapDetailed();
+  const body = $('gapTableBody');
+  body.innerHTML = '';
+  rows.forEach(r => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${Math.round(r.age)}</td><td>${fmtTableGBP(r.cashFlow)}</td><td>${fmtTableGBP(r.growthAmt)}</td><td>${fmtTableGBP(r.pot)}</td>`;
     body.appendChild(tr);
   });
 }
@@ -600,7 +1046,17 @@ function renderChart(rows, showReal, discount, years){
     return (r.totalContributed + rows[0].pot) / d;
   });
 
-  const maxVal = Math.max(...potSeries, 1);
+  const showGap = advancedToggle.checked;
+  let gapSeries = [];
+  if(showGap){
+    const gapNominal = projectGapAccumSeries(years);
+    gapSeries = gapNominal.map((v,i) => {
+      const d = showReal ? Math.pow(1 + (parseFloat($('inflation').value)||0)/100, i) : 1;
+      return v / d;
+    });
+  }
+
+  const maxVal = Math.max(...potSeries, ...(showGap ? gapSeries : []), 1);
   const x = i => padL + (n <= 1 ? 0 : (i/(n-1)) * (W - padL - padR));
   const y = v => H - padB - (v / maxVal) * (H - padT - padB);
 
@@ -623,11 +1079,17 @@ function renderChart(rows, showReal, discount, years){
     }
   });
 
+  const gapPath = showGap ? `
+    <path d="${path(gapSeries)}" fill="none" stroke="#3AE5E7" stroke-width="2"/>
+    <circle cx="${x(gapSeries.length-1)}" cy="${y(gapSeries[gapSeries.length-1])}" r="3.5" fill="#3AE5E7"/>
+  ` : '';
+
   svg.innerHTML = `
     ${gridSvg}
     <path d="${path(contribSeries)}" fill="none" stroke="#484f58" stroke-width="1.5" stroke-dasharray="3,3"/>
     <path d="${path(potSeries)}" fill="none" stroke="#FFBD60" stroke-width="2"/>
     <circle cx="${x(n-1)}" cy="${y(potSeries[n-1])}" r="3.5" fill="#FFBD60"/>
+    ${gapPath}
     ${ageLabels}
   `;
 }
