@@ -566,24 +566,26 @@
       <svg id="chart" viewBox="0 0 600 400"></svg>
     </div>
 
-    <div class="toggle-row">
-      <div class="label">
-        Show year-by-year pension pot breakdown
-        <span class="hint">A detailed table of contributions, growth, and pot value by age</span>
+    <div class="basic-group" id="basicTableGroup">
+      <div class="toggle-row">
+        <div class="label">
+          Show year-by-year pension pot breakdown
+          <span class="hint">A detailed table of contributions, growth, and pot value by age</span>
+        </div>
+        <div class="switch">
+          <input type="checkbox" id="tableToggle">
+          <label class="track" for="tableToggle"></label>
+        </div>
       </div>
-      <div class="switch">
-        <input type="checkbox" id="tableToggle">
-        <label class="track" for="tableToggle"></label>
-      </div>
-    </div>
 
-    <div class="table-wrap" id="tableWrap">
-      <table>
-        <thead>
-          <tr><th>Age</th><th>Contribution</th><th>Growth</th><th>Pot (nominal)</th></tr>
-        </thead>
-        <tbody id="tableBody"></tbody>
-      </table>
+      <div class="table-wrap" id="tableWrap">
+        <table>
+          <thead>
+            <tr><th>Age</th><th>Contribution</th><th>Growth</th><th>Pot (nominal)</th></tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
     </div>
 
     <div class="adv-group" id="advGapTableGroup">
