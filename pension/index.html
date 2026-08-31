@@ -220,11 +220,15 @@
   svg text{ font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
 
   .table-wrap{
+    display:none;
     border:1px solid var(--panel-line);
     border-radius: 3px;
+    overflow-x: auto;
   }
+  .table-wrap.show{ display:block; }
   table{
     width:100%;
+    table-layout: fixed;
     border-collapse: collapse;
     font-size: 12.5px;
   }
@@ -235,6 +239,9 @@
     font-weight:500;
     padding: 8px 10px;
     border-bottom:1px solid var(--panel-line);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   th:first-child, td:first-child{ text-align:left; }
   td{
@@ -243,6 +250,9 @@
     color: var(--text);
     font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
     border-bottom:1px solid #21262d;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   tr:last-child td{ border-bottom:none; }
 
@@ -388,10 +398,21 @@
         <span><i class="dot pot"></i>Pension pot</span>
         <span><i class="dot contrib"></i>Total contributed</span>
       </div>
-      <svg id="chart" viewBox="0 0 600 220" width="100%" height="220"></svg>
+      <svg id="chart" viewBox="0 0 600 320" width="100%" height="320"></svg>
     </div>
 
-    <div class="table-wrap">
+    <div class="toggle-row">
+      <div class="label">
+        Show year-by-year breakdown
+        <span class="hint">A detailed table of contributions, growth, and pot value by age</span>
+      </div>
+      <div class="switch">
+        <input type="checkbox" id="tableToggle">
+        <label class="track" for="tableToggle"></label>
+      </div>
+    </div>
+
+    <div class="table-wrap" id="tableWrap">
       <table>
         <thead>
           <tr><th>Age</th><th>Contribution</th><th>Growth</th><th>Pot (nominal)</th></tr>
@@ -410,6 +431,12 @@
 const $ = id => document.getElementById(id);
 const inputs = ['pot','age','retireAge','growth','contrib','contribGrowth','withdraw','inflation'].map(id => $(id));
 const toggle = $('realToggle');
+const tableToggle = $('tableToggle');
+const tableWrap = $('tableWrap');
+
+tableToggle.addEventListener('change', () => {
+  tableWrap.classList.toggle('show', tableToggle.checked);
+});
 
 const STORAGE_KEY = 'pensionForecast:v1';
 
@@ -529,7 +556,7 @@ function renderTable(rows){
 function renderChart(rows, showReal, discount, years){
   const svg = $('chart');
   const measuredW = Math.round(svg.getBoundingClientRect().width) || 600;
-  const W = Math.max(measuredW, 300), H = 220, padL = 50, padR = 10, padT = 10, padB = 24;
+  const W = Math.max(measuredW, 300), H = 320, padL = 50, padR = 10, padT = 10, padB = 24;
   svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
   const n = rows.length;
 
