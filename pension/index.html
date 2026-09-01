@@ -202,8 +202,8 @@
 
   .adv-group{ display:none; }
   .adv-group.show{ display:block; }
-  .adv-inline{ display:none; }
-  .adv-inline.show{ display:inline-flex; }
+  .adv-inline{ display:none !important; }
+  .adv-inline.show{ display:inline-flex !important; }
 
   .headline .value.neutral{ color: var(--text); }
   .headline .value.good{ color: var(--primary); }
@@ -566,7 +566,7 @@
       <svg id="chart" viewBox="0 0 600 400"></svg>
     </div>
 
-    <div class="basic-group" id="basicTableGroup">
+    <div id="pensionTableGroup">
       <div class="toggle-row">
         <div class="label">
           Show year-by-year pension pot breakdown
@@ -932,16 +932,24 @@ function render(){
   const showReal = toggle.checked;
   const discount = Math.pow(1 + inflation, years);
 
-  const nominalIncome = finalPot * withdraw;
+  const timeline = computeTimeline(finalPot);
+  const discountToAge = targetAge => Math.pow(1 + inflation, Math.max(0, targetAge - timeline.age));
+
+  // Combined total once both the private pension (from access age) and State Pension
+  // are being paid — assumes the pension withdrawal keeps pace with inflation once it
+  // starts, so it combines cleanly with State Pension on a like-for-like nominal basis.
+  const pensionAtStatePension = timeline.pensionIncomeNominal * Math.pow(1 + inflation, Math.max(0, timeline.statePensionAge - timeline.accessAge));
+  const combinedIncomeNominal = pensionAtStatePension + timeline.statePensionNominal;
+
   const displayPot = showReal ? finalPot / discount : finalPot;
-  const displayIncome = showReal ? nominalIncome / discount : nominalIncome;
+  const displayIncome = showReal ? combinedIncomeNominal / discountToAge(timeline.statePensionAge) : combinedIncomeNominal;
 
   $('potValue').textContent = fmtGBP(displayPot);
   $('incomeValue').textContent = fmtGBP(displayIncome);
   $('potLabel').textContent = 'Pot at Retirement' + (showReal ? " (today's terms)" : ' (nominal)');
   $('incomeLabel').textContent = 'Annual Pension Income' + (showReal ? " (today's terms)" : ' (nominal)');
   $('potSub').textContent = years + ' years of growth' + (showReal ? ', discounted for inflation' : ', no inflation adjustment');
-  $('incomeSub').textContent = (withdraw*100).toFixed(1) + '% withdrawal rate' + (showReal ? ' · real terms' : ' · nominal terms');
+  $('incomeSub').textContent = (withdraw*100).toFixed(1) + '% withdrawal rate + State Pension from ' + Math.round(timeline.statePensionAge) + (showReal ? ' · real terms' : ' · nominal terms');
 
   renderTable(rows);
   renderChart(rows, showReal, discount, years);
